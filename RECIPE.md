@@ -61,7 +61,8 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
   (without shoji: tinted with 32 % of the accent, an accent line under it).
 - **Shoji inks**: text on the wood takes the kit's inks, at least 4.5:1 on its grain: on hinoki
   `#2f261f` and `#4a3b2e`, on chestnut `#f1e8d8` and `#e2d6c2`. The brand card is one rail from
-  end to end; Spaces and Agents have a 31 px rail as their header; the desktop and panel
+  end to end; Spaces and Agents have a 31 px rail as their header (bare on the folded sidebar's
+  Agents card); the desktop and panel
   thumbnails are paper plaques in a 2 px wooden frame (the accent for the shown one), the
   bar's buttons a paper card in a 4 px frame.
 - **Side panel** (368 px, hidden until opened from the bar): Files, Changes or Commits, cards like

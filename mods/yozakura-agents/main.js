@@ -660,7 +660,9 @@ export default class Agents extends View {
       .overflow_hidden()
       .when(!kit, (el) => el.rounded(13).bg(islandFill(t.chrome))) // its own card now, so no top divider
       .text_size(13)
-      .when(collapsed, (el) => el.pt(10))
+      .when(collapsed && !kit, (el) => el.pt(10))
+      // Folded, the card keeps its rail, bare, like the Spaces card above it.
+      .when(collapsed && Boolean(kit), (el) => el.child(h_flex().h(31).mb(6).flex_none().relative().children(rail(kit, 31))))
       .when(!collapsed, (el) =>
         el.child(
           h_flex()
