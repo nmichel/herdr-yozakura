@@ -20,13 +20,20 @@ herdr-app do layout.switch --name yozakura
 
 ## Themes
 
-Three themes, each with its own sky behind the cards; Settings → Theme switches between them.
+Three themes, each with its own sky and shoji; Settings → Theme switches between them.
 
-- `tsukiyo` (月夜, moonlit night): the night sky of the preview.
-- `yugure` (夕暮れ, dusk): lighter, under a glycine-violet sky. Shown in the dark appearance.
-- `harugasumi` (春霞, spring haze): a light one, washi paper and ink under a pale sky. Shown in
-  the light appearance. Set Claude Code's `/theme` to a light one with it: its dark theme's
-  greys and message bands read poorly on paper.
+| `yugure` (夕暮れ, dusk) | `harugasumi` (春霞, spring haze) | `tsukiyo` (月夜, moonlit night) |
+|---|---|---|
+| ![yugure](previews/yugure.png) | ![harugasumi](previews/harugasumi.png) | ![tsukiyo](previews/tsukiyo.png) |
+
+- `yugure`: chestnut frames and indigo paper under a glycine-violet sky; the one of the
+  preview, shown in the dark appearance.
+- `harugasumi`: the light one, hinoki frames and kinari washi under a pale sky; shown in the
+  light appearance. Set Claude Code's `/theme` to a light one with it: its dark theme's greys
+  and message bands read poorly on paper.
+- `tsukiyo`: the darkest, chestnut and night-blue paper under the moon.
+
+The previews show a demo window: pretend agents, no real session.
 
 The mods run `git` (the spaces list), `hc machine ls`, and `hc get` and `ps` (the agents list,
 to see the commands Claude Code runs in the background); they read their own `settings.json`

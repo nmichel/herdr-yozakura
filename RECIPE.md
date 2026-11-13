@@ -221,6 +221,24 @@ with faint mottling and fibers, woods with their grain along them, seamless end 
 - Without the status line script, the agent cards and the status bar simply leave out Claude's
   model and gauges.
 
+## Previews
+
+`preview.png` and `previews/*.png` come from a demo window (`herdr-app shot`), never from a
+real one (agent cards show account emails):
+
+- its own home, at a short path (`HERDR_APP_HOME=/tmp/yzh`: the control socket's path has a
+  length limit), seeded with the layout, mods, themes, skies and a `window.json` of 1500×940;
+- its own core: `HC_SESSION` plus scratch `XDG_STATE_HOME`, `XDG_CONFIG_HOME` and
+  `XDG_RUNTIME_DIR`. On a shared core, each window adopts the other's terminals (an unknown
+  `herdr.space` becomes a new space);
+- `HERDR_RELEASES_URL` pointed nowhere, or an update pill covers the status bar;
+- pretend agents: a script that prints a title (OSC 2), a status (OSC 7501
+  `app=claude-code:state=working`) and a transcript wrapped to the pane's columns, with
+  `claude.*` labels set by `hc label` (`you@example.com`), in small git repos under `~/code`;
+- the brand card without the traffic lights' room (the shot leaves the system buttons out);
+- closed with `app.quit`, not killed: a killed window installs a waiting update at its next
+  start, and the app is the person's too.
+
 ## Done when
 
 - `herdr-app check` passes for the seven `yozakura-*` mods; `layout.switch {name: "yozakura"}`
