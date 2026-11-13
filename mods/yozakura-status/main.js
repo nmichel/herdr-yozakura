@@ -86,7 +86,9 @@ export default class WorkspaceStatus extends View {
     const label = (icon, text, color) => h_flex().gap(6).items_center().child(svg(`mods/yozakura-chrome/${icon}.svg`).size(13).text_color(color)).child(text); // colored icon, muted text
     // A count behind its status icon, left out when there are none.
     const count = (s, text, color = t.muted) => h_flex().gap(5).items_center().child(status(t, s)).child(div().text_color(color).child(text));
-    return h_flex().size_full().px(14).gap(16).items_center().rounded(13).overflow_hidden().bg(islandFill(t.chrome)).text_size(11.8).text_color(t.muted) // its own card, no divider
+    // With shoji (shared "yozakura.shoji", see yozakura-chrome) the layout gives the card its paper and frame.
+    const kit = shared("yozakura.shoji");
+    return h_flex().size_full().px(14).gap(16).items_center().overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).text_size(11.8).text_color(t.muted) // its own card, no divider
       .child(label(space?.machine ? "server" : "monitor", space?.machine ?? "This computer", t.working))
       .when(Boolean(dir), el => el.child(label("folder", dir, t.ansi4)))
       .when(Boolean(branch), el => el.child(label("branch", branch, t.accent)))

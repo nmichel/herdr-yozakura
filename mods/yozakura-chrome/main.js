@@ -20,24 +20,82 @@ const SKIES = {
   "harugasumi": "backgrounds/harugasumi.png",
 };
 
+// The shoji look (on unless "shoji": false in settings.json): every pane a sliding door, a wooden frame
+// around washi. Each theme's kit: its textures (drawn by backgrounds/shoji.py), the frame's
+// color (the pane border, plain), the line under a rail, the inks that read on its wood (at
+// least 4.5:1 on its grain) and a hover tint over it. Shared as "yozakura.shoji" for the mods that draw
+// cards and headers; null when off or for a theme without a kit.
+const SHOJI = {
+  "harugasumi": {
+    paper: "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+    wood: "mods/yozakura-chrome/shoji/wood-hinoki.png",
+    frame: "#c8a978", edge: "#a98656", ink: "#2f261f", inkDim: "#4a3b2e", hover: "#2f261f1a",
+  },
+  "yugure": {
+    paper: "mods/yozakura-chrome/shoji/paper-yugure.jpg",
+    wood: "mods/yozakura-chrome/shoji/wood-kuri.png",
+    frame: "#4d3b2c", edge: "#2a1e15", ink: "#f1e8d8", inkDim: "#e2d6c2", hover: "#ffffff1a",
+  },
+  "tsukiyo": {
+    paper: "mods/yozakura-chrome/shoji/paper-tsukiyo.jpg",
+    wood: "mods/yozakura-chrome/shoji/wood-kuri.png",
+    frame: "#4d3b2c", edge: "#22180f", ink: "#f1e8d8", inkDim: "#e2d6c2", hover: "#ffffff1a",
+  },
+};
+let shojiWanted = false;
+
 // What the layout should hold for the theme shown, rewritten there since it isn't a mod's:
-// the sky, and the main pane's fill, which "main_opacity" fades (the theme's background at
-// that opacity; at 1, the plain theme color). Only writes when something differs; runs at
-// start, when settings.json changes, and every second, to follow a theme picked meanwhile.
+// the sky; the main pane's fill, which "main_opacity" fades (the theme's background at that
+// opacity; at 1, the plain theme color), or with shoji its washi, and its frame. Only writes
+// when something differs; runs at start, when settings.json changes, and every second, to
+// follow a theme picked meanwhile.
 function applyLook() {
   const root = layout();
   const pane = find(root, "main")?.content?.pane;
   if (!pane) return;
+  const name = typeof root.theme === "string" ? root.theme : root.theme?.[settings()?.dark ? "dark" : "light"];
+  const kit = shojiWanted ? SHOJI[name] ?? null : null;
+  if (JSON.stringify(shared("yozakura.shoji") ?? null) !== JSON.stringify(kit)) setShared("yozakura.shoji", kit);
   const o = shared("yozakura.mainOpacity");
   const fill = typeof o === "number" && o < 1 ? fade(theme().background, o) : "background";
-  const name = typeof root.theme === "string" ? root.theme : root.theme?.[settings()?.dark ? "dark" : "light"];
+  const frame = kit ? { width: 5, color: kit.frame } : { width: 1, color: "border" };
+  const want = {
+    background: kit ? { image: kit.paper, fit: "cover" } : fill,
+    border: frame, focus: frame, radius: kit ? 4 : 14,
+  };
+  const paneChanged = Object.keys(want).some((k) => JSON.stringify(pane[k]) !== JSON.stringify(want[k]));
+  // The cards: a thinner frame around the same paper; without shoji, the thin border and no
+  // background of their own (their mods fill them).
+  const card = kit
+    ? { border: { width: 4, color: kit.frame }, radius: 4, background: { image: kit.paper, fit: "cover" } }
+    : { border: { width: 1, color: "border" }, radius: 14, background: undefined };
+  const cardsChanged = CARDS.some((id) => {
+    const node = find(root, id);
+    return node && Object.keys(card).some((k) => JSON.stringify(node[k]) !== JSON.stringify(card[k]));
+  });
   const sky = SKIES[name];
   const skyChanged = sky && root.background?.image !== sky;
-  if (pane.background === fill && !skyChanged) return;
+  if (!paneChanged && !cardsChanged && !skyChanged) return;
   const next = JSON.parse(JSON.stringify(root));
-  find(next, "main").content.pane.background = fill;
+  Object.assign(find(next, "main").content.pane, want);
+  for (const id of CARDS) {
+    const node = find(next, id);
+    if (!node) continue;
+    Object.assign(node, card);
+    if (!card.background) delete node.background;
+  }
   if (skyChanged) next.background = { ...(next.background ?? {}), image: sky };
   run("layout.set", { layout: next });
+}
+const CARDS = ["brand", "spaces", "agents", "sidebar-footer", "status"];
+
+// The wood of a shoji rail, `h` px tall: its texture's strips side by side (as wide as any
+// card), and a line under it unless the rail is the whole card.
+function rail(kit, h, line = true) {
+  return [
+    h_flex().absolute().top(0).left(0).h_full().children([0, 1].map(() => image(kit.wood).w(Math.round((h * 4000) / 60)).h(h).flex_none())),
+    line ? div().absolute().bottom(0).left(0).w_full().h(1).bg(kit.edge) : null,
+  ].filter(Boolean);
 }
 
 function find(node, id) {
@@ -73,6 +131,7 @@ export default class WorkspaceChrome extends View {
         let s = {};
         try { s = JSON.parse((await readTextFile(`${dir}/settings.json`)) ?? "{}"); } catch {}
         const o = clamp(s.opacity), main = clamp(s.main_opacity);
+        shojiWanted = s.shoji !== false; // on unless turned off
         if (shared("yozakura.opacity") !== o) setShared("yozakura.opacity", o);
         if (shared("yozakura.mainOpacity") !== main) setShared("yozakura.mainOpacity", main);
         applyLook();
@@ -83,25 +142,31 @@ export default class WorkspaceChrome extends View {
   }
   button(id, label, action) {
     const t = theme();
-    return div().id(id).size(26).flex_none().flex().items_center().justify_center().rounded(6).text_color(t.muted).hover(s => s.bg(t.hover).text_color(t.foreground))
+    const kit = shared("yozakura.shoji");
+    return div().id(id).size(26).flex_none().flex().items_center().justify_center().rounded(6).text_color(kit ? kit.inkDim : t.muted)
+      .hover(s => s.bg(kit ? kit.hover : t.hover).text_color(kit ? kit.ink : t.foreground))
       .on_mouse_down("left", (_e, cx) => cx.stop_propagation()).on_click(action).child(label);
   }
   render() {
     const t = theme();
     const collapsed = narrow();
+    // With shoji the layout gives the cards their paper and frame: no fill of their own.
+    const kit = shared("yozakura.shoji");
     if (props()?.footer) {
       const row = (id, icon, label, dim, action) => h_flex().id(id).h(28).px(collapsed ? 6 : 8).gap(9).items_center().rounded(8).when(collapsed, el => el.justify_center())
         .text_color(dim ? t.dim : t.muted).hover(s => s.bg(t.hover).text_color(t.foreground)).cursor_pointer()
         .on_click(action).child(svg(`mods/yozakura-chrome/${icon}.svg`).size(14))
         .when(!collapsed, el => el.child(div().min_w(0).truncate().child(label)));
-      return v_flex().size_full().rounded(13).overflow_hidden().bg(islandFill(t.chrome)).px(collapsed ? 5 : 8).py(8).text_size(13) // its own card, no divider
+      return v_flex().size_full().overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).px(collapsed ? 5 : 8).py(kit ? 5 : 8).text_size(13) // its own card, no divider
         .child(row("settings", "settings", "Settings", false, () => run("app.settings"))
           .when(Boolean(updates().app.ready), el => el.child(div().size(6).rounded_full().bg(t.accent))))
         .child(row("machine", "plus", "Add machine", true, () => run("mod.open", { name: "machine-add" })));
     }
-    return h_flex().size_full().rounded(13).overflow_hidden().bg(islandFill(t.chrome)).when(collapsed, el => el.justify_center()).when(!collapsed, el => el.pl(14).pr(10)).gap(4).items_center().text_size(13.5)
+    // The brand card: with shoji, a rail of wood from end to end.
+    return h_flex().size_full().overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).when(Boolean(kit), el => el.relative().rounded(1).children(rail(kit, 30, false)))
+      .when(collapsed, el => el.justify_center()).when(!collapsed, el => el.pl(14).pr(10)).gap(4).items_center().text_size(13.5)
       .when(window()?.platform === "macos" && !window()?.fullscreen && !collapsed, el => el.pl(76))
-      .when(!collapsed, el => el.child(h_flex().flex_1().min_w(0).gap(8).items_center().child(image("frame/welcome/herdr.png").size(20).flex_none().rounded(5)).child(div().min_w(0).truncate().font_semibold().text_color(t.foreground).child("Herdr"))))
+      .when(!collapsed, el => el.child(h_flex().flex_1().min_w(0).gap(8).items_center().child(image("frame/welcome/herdr.png").size(20).flex_none().rounded(5)).child(div().min_w(0).truncate().font_semibold().text_color(kit ? kit.ink : t.foreground).child("Herdr"))))
       .when(!collapsed, el => el.child(this.button("search", svg("mods/yozakura-chrome/search.svg").size(15), () => run("mod.open", { name: "picker" }))))
       // On the macOS rail the traffic lights fill the row; the agents list's » unfolds it.
       .when(!(collapsed && window()?.platform === "macos"), el => el.child(this.button("sidebar-toggle", svg("mods/yozakura-chrome/sidebar.svg").size(15), toggleSidebar)));

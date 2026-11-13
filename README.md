@@ -1,7 +1,7 @@
 # Yozakura, a Herdr layout
 
-Night-time cherry blossoms for [Herdr](https://herdr.dev): desktops and panels as thumbnails,
-agents with a dancer while they work, a pink-tinted title on the focused panel.
+Night-time cherry blossoms for [Herdr](https://herdr.dev): every panel a shoji, a wooden frame
+around washi paper; desktops and panels as thumbnails, agents with a dancer while they work.
 What it is and how it's built: [RECIPE.md](RECIPE.md).
 
 ![Yozakura](preview.png)
@@ -56,7 +56,11 @@ the menu, and replaces the built-in agent that starts the same command.
   render again (3000×2000 PNG, under a new name: Herdr keeps an image it has loaded).
 - `extras/cropgif.swift`: crops an animated GIF to its figure (macOS, ImageIO), to add a
   dancer of your own; its header says how.
-- `mods/yozakura-chrome/settings.json`: `opacity` (cards) and `main_opacity` (panes), 0 to 1.
+- `extras/shoji-textures.py`: draws the shoji's papers (one per theme) and woods (hinoki,
+  chestnut) as SVGs (`python3 extras/shoji-textures.py out-folder`), to render again (papers
+  2400×1600, woods 4000×60, under new names) into `mods/yozakura-chrome/shoji/`.
+- `mods/yozakura-chrome/settings.json`: `shoji` (`false`: plain rounded cards instead of the
+  shoji), `opacity` (plain cards) and `main_opacity` (plain panes), 0 to 1.
 
 ## Updating this folder
 

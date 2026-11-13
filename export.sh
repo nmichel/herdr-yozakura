@@ -26,6 +26,9 @@ done
 if [ -f "$home/backgrounds/yozakura.py" ]; then
   cp "$home/backgrounds/yozakura.py" "$here/extras/yozakura-background.py"
 fi
+if [ -f "$home/backgrounds/shoji.py" ]; then
+  cp "$home/backgrounds/shoji.py" "$here/extras/shoji-textures.py"
+fi
 if [ -f "$HOME/.claude/statusline.sh" ]; then
   sed 's#islands-workspace-status#yozakura-status#' "$HOME/.claude/statusline.sh" > "$here/extras/claude-statusline.sh"
   chmod +x "$here/extras/claude-statusline.sh"

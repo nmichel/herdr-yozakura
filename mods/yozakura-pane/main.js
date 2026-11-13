@@ -45,6 +45,18 @@ function status(t, s, busy = false) {
   return slot.child(div().size(8).rounded(4).bg(t.ansi2));
 }
 
+// With the shoji look (shared "yozakura.shoji", see yozakura-chrome), the header is the top
+// rail of a sliding door: its wood, two strips of 2000x30 side by side (as wide as any pane),
+// a line under it (the accent on the focused pane, which also warms its wood), and inks that
+// read on the grain.
+function rail(t, kit, on) {
+  return [
+    h_flex().absolute().top(0).left(0).h_full().children([0, 1].map(() => image(kit.wood).w(2000).h(30).flex_none())),
+    on ? div().absolute().inset_0().bg(t.accent + "1f") : null,
+    div().absolute().bottom(0).left(0).w_full().h(on ? 2 : 1).bg(on ? t.accent : kit.edge),
+  ].filter(Boolean);
+}
+
 function folder(cwd) {
   if (!cwd) return "";
   const h = home();
@@ -170,13 +182,13 @@ export default class Pane extends View {
     for (const r of taken) cx.spawn(async (cx) => undock(cx, r.terminal, r.stay));
   }
 
-  button(t, id, icon, command, args) {
+  button(t, id, icon, command, args, kit = null) {
     return div()
       .id(id)
       .p(3)
       .rounded(4)
-      .text_color(t.dim)
-      .hover((s) => s.bg(t.hover).text_color(t.foreground))
+      .text_color(kit ? kit.inkDim : t.dim)
+      .hover((s) => s.bg(kit ? kit.hover : t.hover).text_color(kit ? kit.ink : t.foreground))
       .on_click((_e, cx) => {
         cx.stop_propagation();
         run(command, args);
@@ -198,7 +210,7 @@ export default class Pane extends View {
       .px(6)
       .gap(4)
       .items_center()
-      .rounded_t(13).bg(mainFill(t.background))
+      .rounded_t(shared("yozakura.shoji") ? 1 : 13).bg(mainFill(t.background))
       .border_b(1)
       .border_color(t.accent)
       .on_mouse_up("left", () => setShared("yozakura.dock.drag", null))
@@ -230,7 +242,9 @@ export default class Pane extends View {
     const drag = shared("yozakura.dock.drag");
     if (drag?.terminal && drag.terminal !== p.terminal) return this.zones(t, p.pane, drag);
     const name = ((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name || "shell";
-    const pic = icon(p.program, 14, t.dim);
+    const kit = shared("yozakura.shoji");
+    const ink = kit ? kit.ink : t.foreground, inkDim = kit ? kit.inkDim : t.dim;
+    const pic = icon(p.program, 14, inkDim);
     const st = p.status;
     const pane = p.pane;
     // Docked: other panes share its tab. Undocking leaves the focus there, on the focused one.
@@ -238,29 +252,33 @@ export default class Pane extends View {
     const stay = (others.find((q) => q.focused) ?? others[0])?.pane;
     // The focused panel's bar stands out: tinted with the accent, an accent line under it.
     const on = p.focused;
+    // The status on a disc of the theme's background, so its colors read as on the panes.
+    const badge = (el) => kit ? h_flex().size(18).flex_none().items_center().justify_center().rounded_full().bg(t.background).child(el) : el;
     return h_flex()
       .id(`pane-head-${pane}`)
       .size_full()
       .px(10)
       .gap(8)
       .items_center()
-      .rounded_t(13).bg(mainFill(on ? mix(t.background, t.accent, 0.32) : t.background)) // sits inside a 14px card
-      .border_b(1)
-      .border_color(on ? t.accent : t.border)
+      .when(!kit, (el) => el
+        .rounded_t(13).bg(mainFill(on ? mix(t.background, t.accent, 0.32) : t.background)) // sits inside a 14px card
+        .border_b(1)
+        .border_color(on ? t.accent : t.border))
+      .when(Boolean(kit), (el) => el.relative().overflow_hidden().rounded_t(1).children(rail(t, kit, on)))
       .text_size(12)
       .on_hover((hovered, cx) => { this.hovered = hovered; cx.notify(); })
       .on_click(() => run("pane.focus", { pane }))
       .when(Boolean(pic), (el) => el.child(pic))
-      .child(div().flex_none().truncate().max_w(260).font_medium().when(on, (el) => el.font_semibold()).text_color(t.foreground).child(name))
-      .child(div().flex_1().truncate().text_color(t.dim).child(folder(p.cwd)))
-      .when(Boolean(st), el => el.child(status(t, st, Boolean((shared("yozakura.background") ?? {})[p.terminal]))))
+      .child(div().flex_none().truncate().max_w(260).font_medium().when(on, (el) => el.font_semibold()).text_color(ink).child(name))
+      .child(div().flex_1().truncate().text_color(inkDim).child(folder(p.cwd)))
+      .when(Boolean(st), el => el.child(badge(status(t, st, Boolean((shared("yozakura.background") ?? {})[p.terminal])))))
       // Always there on a docked terminal: back to a tab of its own.
       .when(Boolean(stay) && Boolean(p.terminal), el => el.child(div()
         .id(`ph-u-${pane}`)
         .p(3)
         .rounded(4)
-        .text_color(t.dim)
-        .hover((s) => s.bg(t.hover).text_color(t.foreground))
+        .text_color(inkDim)
+        .hover((s) => s.bg(kit ? kit.hover : t.hover).text_color(ink))
         .tooltip("Undock: back to its own tab")
         .on_click((_e, cx) => {
           cx.stop_propagation();
@@ -268,9 +286,9 @@ export default class Pane extends View {
         })
         .child(svg("mods/yozakura-pane/undock.svg").size(14))))
       .when(this.hovered, el => el
-        .child(this.button(t, `ph-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }))
-        .child(this.button(t, `ph-d-${pane}`, "split-down", "pane.split", { direction: "down", pane }))
-        .child(this.button(t, `ph-z-${pane}`, p.zoomed ? "unzoom" : "zoom", "pane.zoom", { pane }))
-        .child(this.button(t, `ph-x-${pane}`, "close", "pane.close", { pane })));
+        .child(this.button(t, `ph-r-${pane}`, "split-right", "pane.split", { direction: "right", pane }, kit))
+        .child(this.button(t, `ph-d-${pane}`, "split-down", "pane.split", { direction: "down", pane }, kit))
+        .child(this.button(t, `ph-z-${pane}`, p.zoomed ? "unzoom" : "zoom", "pane.zoom", { pane }, kit))
+        .child(this.button(t, `ph-x-${pane}`, "close", "pane.close", { pane }, kit)));
   }
 }

@@ -210,6 +210,11 @@ export default class Tabs extends View {
     for (const p of panes()) tabPanes.set(p.tab, [...(tabPanes.get(p.tab) ?? []), p]);
     const titles = new Map(agents().map(a => [a.pane, a.title]));
     const background = shared("yozakura.background") ?? {}; // terminal -> its background commands
+    // With shoji (shared "yozakura.shoji", see yozakura-chrome): paper plaques in a wooden frame.
+    const kit = shared("yozakura.shoji");
+    const plaque = (el, on, round) => kit
+      ? el.rounded(4).border(2).border_color(on ? t.accent : kit.frame).bg(t.background)
+      : el.rounded(round).border(1).border_color(on ? t.accent : t.border);
     const button = (id, label, action, pill = false) => div().id(id).size(26).flex_none().flex().items_center().justify_center().rounded(6).text_color(t.dim)
       .when(pill, el => el.bg(t.surface).border(1).border_color(t.border)) // neutral pill, like a tab
       .hover(s => s.bg(t.hover).text_color(t.foreground))
@@ -223,8 +228,8 @@ export default class Tabs extends View {
       const name = desktopLabel(c, ps, titles);
       const on = c.active;
       return h_flex().id(`desk-${c.id}`).h_full().px(14).gap(7).items_center().flex_none().text_size(12)
-        .rounded(14) // as tall and round as the Herdr card
-        .border(1).border_color(on ? t.accent : t.border).bg(islandFill(t.surface))
+        .when(!kit, el => el.bg(islandFill(t.surface)))
+        .when(true, el => plaque(el, on, 14)) // as tall and round as the Herdr card
         .text_color(on ? t.accent : t.muted)
         .hover(s => s.bg(t.hover))
         .when(Boolean(terminal) && drag?.terminal === terminal, el => el.opacity(0.5)) // being dragged
@@ -269,7 +274,8 @@ export default class Tabs extends View {
       const on = p.focused;
       const name = panelName(p, titles);
       return h_flex().id(`pthumb-${p.pane}`).h_full().px(12).gap(7).items_center().flex_none().text_size(12)
-        .rounded(STRIP / 2).border(1).border_color(on ? t.accent : t.border).bg(on ? t.selected : islandFill(t.surface))
+        .when(!kit, el => el.bg(on ? t.selected : islandFill(t.surface)))
+        .when(true, el => plaque(el, on, STRIP / 2))
         .text_color(on ? t.accent : t.muted)
         .hover(s => s.bg(t.hover))
         .when(Boolean(p.terminal) && drag?.terminal === p.terminal, el => el.opacity(0.5)) // being dragged
@@ -323,7 +329,9 @@ export default class Tabs extends View {
       .on_scroll_wheel(e => { if (Math.abs(e.delta.y) >= 1) run(e.delta.y > 0 ? "tab.prev" : "tab.next"); })
       .child(h_flex().id("tab-scroll").flex_1().min_w(0).h_full().items_center().gap(3).overflow_x_scrollbar().children(shown.map(desktop)))
       // The buttons on the right share one card, like the sidebar's, flush with the main panel's right edge.
-      .child(h_flex().id("tab-actions").flex_none().h_full().px(10).gap(2).items_center().rounded(14).bg(islandFill(t.chrome)).border(1).border_color(t.border)
+      .child(h_flex().id("tab-actions").flex_none().h_full().px(10).gap(2).items_center()
+        .when(!kit, el => el.rounded(14).bg(islandFill(t.chrome)).border(1).border_color(t.border))
+        .when(Boolean(kit), el => el.rounded(4).border(4).border_color(kit.frame).bg(t.background))
         .child(button("tab-new", "+", () => openOverlay({ mod: "yozakura-new-menu", kind: "popup", width: 250, height: 512 })))
         .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/yozakura-tabs/file.svg")))
         .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/yozakura-tabs/changes.svg")))

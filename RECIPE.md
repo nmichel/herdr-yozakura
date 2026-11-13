@@ -1,7 +1,7 @@
 # Yozakura
 
-A night-time cherry-blossom window for coding agents: rounded cards float over a moonlit sky
-with a blossoming branch and falling petals, in muted pink and indigo. The sidebar lists spaces
+A cherry-blossom window for coding agents: every panel is a shoji, a wooden frame around washi
+paper, over a sky with a blossoming branch and falling petals. The sidebar lists spaces
 and agents (a small dancer plays on every agent that works); the top bar shows one thumbnail per
 desktop (the panels docked together) and, under it, one per panel of the shown desktop; the
 focused panel's title bar is tinted pink.
@@ -16,8 +16,13 @@ everything, the theme's sky (`backgrounds/<theme>.png`, 3000×2000, `cover`): a 
 (by day, a pale sun) top right, a cherry branch across the top, mist bands, falling petals,
 seigaiha waves at the bottom.
 
-Every card has a 14 px radius and a 1 px `border`; cards are filled with the theme's color at
-85 % opacity (`yozakura-chrome/settings.json`: `opacity`, and `main_opacity` for the panes).
+Every card is a shoji (`yozakura-chrome/settings.json`: `shoji`, on unless `false`): a frame
+of plain wood (5 px around panes, 4 px around cards, 4 px radius) around the theme's washi
+(`mods/yozakura-chrome/shoji/paper-<theme>.jpg`, `cover`), and title bars that are rails of
+grained wood (`wood-hinoki.png` for Haru-gasumi, `wood-kuri.png`, dark chestnut, for the
+others) with a 1 px darker line under them. Corners inside (agent cards, space rows) are
+nearly square (3 px). Without shoji: 14 px radius, a 1 px `border`, filled with the theme's
+color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
 
 - **Sidebar** (268 px, 44–480): four cards, 12 px apart.
   - Brand (38 px): the Herdr logo and "Herdr"; Search (opens `picker`) and the sidebar toggle.
@@ -49,10 +54,16 @@ Every card has a 14 px radius and a 1 px `border`; cards are filled with the the
   - Under it (30 px), when the shown desktop has several panels: one pill per panel (program
     icon, session title or program name, status); the focused one outlined in the accent, with ×.
 - **Panes**: the shown desktop's panels as cards (12 px gap), terminals with 16×14 px padding
-  over the card's translucent fill. Each has a 30 px header: program icon, name, folder, status,
-  an undock button when docked with others; on hover split right, split down, zoom, close. The
-  focused panel's header is tinted with 32 % of the accent, has an accent line under it and a
-  semibold name.
+  over the washi. Each has a 30 px header, the door's top rail: program icon, name, folder,
+  status (on a disc of the theme's background, so its colors read on the wood), an undock button
+  when docked with others; on hover split right, split down, zoom, close. The focused panel's
+  rail is warmed with 12 % of the accent, has a 2 px accent line under it and a semibold name
+  (without shoji: tinted with 32 % of the accent, an accent line under it).
+- **Shoji inks**: text on the wood takes the kit's inks, at least 4.5:1 on its grain: on hinoki
+  `#2f261f` and `#4a3b2e`, on chestnut `#f1e8d8` and `#e2d6c2`. The brand card is one rail from
+  end to end; Spaces and Agents have a 31 px rail as their header; the desktop and panel
+  thumbnails are paper plaques in a 2 px wooden frame (the accent for the shown one), the
+  bar's buttons a paper card in a 4 px frame.
 - **Side panel** (368 px, hidden until opened from the bar): Files, Changes or Commits.
 - **Status bar** (32 px): the folder and branch of the terminal in view; how many agents, how
   many work, how many wait for you; Claude's context window, 5-hour and 7-day usage as gauges
@@ -134,10 +145,13 @@ root (row; background image, titlebar none, theme yozakura)
 Mods (each `place: "none"`):
 
 - `yozakura-chrome`: the brand card and, with `{footer: true}`, the footer. The brand copy reads
-  its own `settings.json` (`readTextFile` + `watchFolder`), shares `yozakura.opacity` and
-  `yozakura.mainOpacity`, and rewrites the layout (`layout.set`) to match the theme shown: its
-  sky on the root, its background (faded) on the main pane; checked every second, so a theme
-  picked in Settings brings its sky.
+  its own `settings.json` (`readTextFile` + `watchFolder`), shares `yozakura.opacity`,
+  `yozakura.mainOpacity` and `yozakura.shoji` (the theme's shoji kit: textures, frame color,
+  inks; null when off), and rewrites the layout (`layout.set`) to match the theme shown: its
+  sky on the root; with shoji, the frame and washi of the main pane and of the cards `brand`,
+  `spaces`, `agents`, `sidebar-footer`, `status` (`SHOJI`, `CARDS`), else the main pane's faded
+  background and the thin borders; checked every second, so a theme picked in Settings brings
+  its sky and its shoji.
   Holds the shared icons (Lucide-style SVGs) the other mods use.
 - `yozakura-spaces`: spaces list; runs `git status`/`rev-parse` (`exec`, on the space's machine)
   and `hc machine ls`; watches the repos it shows.
@@ -154,17 +168,26 @@ Shipped mods used: `files`, `changes`, `git-history`, `menu`, `picker`,
 `machine-add`, and `frame/welcome/herdr.png`.
 Shared keys: `yozakura.opacity`, `yozakura.mainOpacity`, `yozakura.dock.drag`,
 `yozakura.dock.undock`, `yozakura.agents.sort`, `yozakura.background` (address → count of
-background commands) (this layout's); `sidebar.width`, `sidebar.collapsed`, `space.colors`,
+background commands), `yozakura.shoji` (this layout's); `sidebar.width`, `sidebar.collapsed`, `space.colors`,
 `workspace.panels`, `new-menu.agents` (shared with the shipped mods on purpose).
 Claude figures: `claude.*` labels on each Claude Code terminal, written by
 `extras/claude-statusline.sh` (Claude Code's `statusLine` command; needs `jq` and `hc`);
 `claude.email` comes from the account's `.claude.json` and tells accounts apart.
 Art: `backgrounds/{tsukiyo,yugure,harugasumi}.png` (drawn by `extras/yozakura-background.py`,
 which writes the SVG, one sky per theme), the seven dancer GIFs (9 frames at 160 ms, looping, transparent; each cropped
-to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide), the screen icons.
+to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide), the screen icons,
+the shoji's textures (`mods/yozakura-chrome/shoji/`, drawn by `extras/shoji-textures.py`: papers
+with faint mottling and fibers, woods with their grain along them, seamless end to end).
 
 ## Watch out
 
+- A pane's frame takes one color (`border`), no image: the shoji's sides are plain wood; only
+  the rails (drawn by mods) show the grain. The washi comes from the layout (`background:
+  {image, fit: "cover"}` on the pane frame and the card blocks), so a mod over it draws no fill.
+- `image()` keeps its picture's proportions: the rails show the wood as strips sized at its
+  4000×60 proportions (`h × 66.7` wide, `h` tall), two side by side, cut by the header.
+- Text over the textures: their darkest (light theme) or lightest (dark ones) 1 % of pixels
+  were measured, and the fibers toned down until every text color stays at 4.5:1.
 - Herdr keeps an image it has loaded: a sky drawn again must go under a new file name (and in
   `SKIES`, `yozakura-chrome`), or the window keeps the old one.
 - A light theme picked in Settings goes in the layout's `light` half, a dark one in its `dark`
@@ -209,7 +232,10 @@ to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide)
 - Clicking the shown desktop opens its name field; typing a name and Enter renames it.
 - Undocking a panel puts it in its own desktop within a second, its thumbnail appears in the
   bar, the focus stays on the panel it left, and no "Terminal brought back" toast follows.
-- Only the focused panel's header is tinted pink.
+- With shoji, every pane and card has a wooden frame around washi and the panes' headers are
+  rails of grained wood; the focused one has the accent line. In Haru-gasumi the wood is pale
+  hinoki, in Yūgure and Tsukiyo dark chestnut on indigo paper. `"shoji": false` brings back
+  plain rounded cards within a second.
 - Focusing the pane of an agent whose card is scrolled out of the list brings the card into view.
 - With `extras/programs.example.json` as `programs.json`, + offers Claude Work and Claude
   Personal, and no Claude Code.

@@ -10,6 +10,18 @@ import { agents, spaces, terminals, panes, focused, home, run, notify, theme, sh
 // How long a terminal may be without a tab before it's brought back (see recover()).
 const LOST_GRACE = 10000;
 
+// The wood of a shoji rail, `h` px tall (see yozakura-chrome): its texture's strips side by
+// side, as wide as any card, and a line under it.
+function rail(kit, h) {
+  return [
+    h_flex().absolute().top(0).left(0).h_full().children([0, 1].map(() => image(kit.wood).w(Math.round((h * 4000) / 60)).h(h).flex_none())),
+    div().absolute().bottom(0).left(0).w_full().h(1).bg(kit.edge),
+  ];
+}
+
+// A corner's radius: nearly square with the shoji look (shared "yozakura.shoji").
+const corner = (r) => (shared("yozakura.shoji") ? 3 : r);
+
 // The cards' fill at the opacity in yozakura-chrome/settings.json (1 when unset).
 const islandFill = (c) => {
   const o = shared("yozakura.opacity");
@@ -345,7 +357,7 @@ export default class Agents extends View {
       .id(`sub-${k.address}`)
       .pl(39)
       .pr(8)
-      .rounded(8)
+      .rounded(corner(8))
       .h(26)
       .flex_none()
       .gap(0)
@@ -501,7 +513,7 @@ export default class Agents extends View {
         .px(10)
         .py(8)
         .gap(4)
-        .rounded(10)
+        .rounded(corner(10))
         .border(1)
         .border_color(a.focused ? t.accent : t.border) // the shown agent outlined, like the active tab
         .bg(a.focused ? t.selected : t.surface)
@@ -639,31 +651,32 @@ export default class Agents extends View {
       if (at >= 0) this.scroll.scroll_to_item(at);
     }
 
+    // With shoji (shared "yozakura.shoji", see yozakura-chrome) the layout gives the card its
+    // paper and frame, and the header is a rail of wood.
+    const kit = shared("yozakura.shoji");
     return v_flex()
       .size_full()
       .min_h(0)
-      .rounded(13) // its own card now, so no top divider
       .overflow_hidden()
-      .bg(islandFill(t.chrome))
+      .when(!kit, (el) => el.rounded(13).bg(islandFill(t.chrome))) // its own card now, so no top divider
       .text_size(13)
       .when(collapsed, (el) => el.pt(10))
       .when(!collapsed, (el) =>
         el.child(
           h_flex()
             .px(16)
-            .h(41)
-            .pt(14)
-            .pb(5)
+            .when(!kit, (el) => el.h(41).pt(14).pb(5))
+            .when(Boolean(kit), (el) => el.h(31).mb(6).relative().children(rail(kit, 31)))
             .flex_none()
             .items_center()
             .justify_between()
-            .child(div().text_size(11.5).font_medium().text_color(t.dim).child("Agents"))
+            .child(div().text_size(11.5).font_medium().text_color(kit ? kit.ink : t.dim).child("Agents"))
             .child(
               div()
                 .id("ag-sort")
                 .text_size(11)
-                .text_color(t.dim)
-                .hover((s) => s.text_color(t.foreground))
+                .text_color(kit ? kit.inkDim : t.dim)
+                .hover((s) => s.text_color(kit ? kit.ink : t.foreground))
                 .on_click(() => openOverlay({ mod: "yozakura-agents", kind: "popup", width: 210, height: 172, props: { sortMenu: true } }))
                 .tooltip(`Sort agents: ${sort.label}`)
                 .child(svg(`mods/yozakura-chrome/${sort.icon}.svg`).size(14)),

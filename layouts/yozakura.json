@@ -15,11 +15,15 @@
           "size": {
             "px": 38
           },
-          "border": {
-            "width": 1,
-            "color": "border"
+          "background": {
+            "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+            "fit": "cover"
           },
-          "radius": 14,
+          "border": {
+            "width": 4,
+            "color": "#c8a978"
+          },
+          "radius": 4,
           "window_drag": true
         },
         {
@@ -36,11 +40,15 @@
                 "weight": 1
               },
               "min": 90,
-              "border": {
-                "width": 1,
-                "color": "border"
+              "background": {
+                "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                "fit": "cover"
               },
-              "radius": 14
+              "border": {
+                "width": 4,
+                "color": "#c8a978"
+              },
+              "radius": 4
             },
             {
               "id": "agents",
@@ -52,11 +60,15 @@
                 "weight": 1
               },
               "min": 90,
-              "border": {
-                "width": 1,
-                "color": "border"
+              "background": {
+                "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                "fit": "cover"
               },
-              "radius": 14
+              "border": {
+                "width": 4,
+                "color": "#c8a978"
+              },
+              "radius": 4
             }
           ],
           "gap": 12
@@ -73,11 +85,15 @@
           "size": {
             "px": 72
           },
-          "border": {
-            "width": 1,
-            "color": "border"
+          "background": {
+            "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+            "fit": "cover"
           },
-          "radius": 14
+          "border": {
+            "width": 4,
+            "color": "#c8a978"
+          },
+          "radius": 4
         }
       ],
       "size": {
@@ -121,16 +137,19 @@
                     "height": 30,
                     "position": "top"
                   },
-                  "background": "#f3eee5d9",
+                  "background": {
+                    "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                    "fit": "cover"
+                  },
                   "border": {
-                    "width": 1,
-                    "color": "border"
+                    "width": 5,
+                    "color": "#c8a978"
                   },
                   "focus": {
-                    "width": 1,
-                    "color": "border"
+                    "width": 5,
+                    "color": "#c8a978"
                   },
-                  "radius": 14,
+                  "radius": 4,
                   "gap": 12,
                   "lone": true
                 }
@@ -166,7 +185,7 @@
                       }
                     }
                   ],
-                  "active": "files"
+                  "active": "commits"
                 }
               ],
               "size": {
@@ -189,11 +208,15 @@
           "size": {
             "px": 32
           },
-          "border": {
-            "width": 1,
-            "color": "border"
+          "background": {
+            "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+            "fit": "cover"
           },
-          "radius": 14
+          "border": {
+            "width": 4,
+            "color": "#c8a978"
+          },
+          "radius": 4
         }
       ],
       "gap": 12,
