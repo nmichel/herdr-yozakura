@@ -19,6 +19,7 @@ Herdr ships, and modified; each `main.js` says so at its top:
 | `mods/yozakura-chrome` | `workspace-chrome` |
 | `mods/yozakura-status` | `workspace-status` |
 | `mods/yozakura-pane` | `pane` |
+| `mods/yozakura-new-menu` | `new-menu` |
 
 Icons copied unchanged from Herdr's shipped mods:
 
@@ -34,7 +35,8 @@ Herdr's glyphs, including the icons in its shipped mods, are [Lucide](https://lu
 under the ISC License, some derived from Feather under the MIT License
 ([licenses/Lucide-ISC.txt](licenses/Lucide-ISC.txt)). This covers the glyphs among the icons
 above, and these icons drawn from Lucide shapes:
-`mods/yozakura-agents/bubble.svg`, `warning.svg`, `mods/yozakura-pane/undock.svg`,
+`mods/yozakura-agents/bubble.svg`, `warning.svg`, `account.svg`, `background.svg`,
+`mods/yozakura-pane/undock.svg`,
 `mods/yozakura-tabs/desktop.svg`, `desktop-split.svg`.
 
 Trademarks (Herdr's name and logo, which the layout shows from Herdr's own files) are not

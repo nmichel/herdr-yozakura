@@ -23,13 +23,17 @@ function status(t, s) {
 // Claude Code's status line figures, which ~/.claude/statusline.sh writes as `claude.*`
 // labels on its agent's terminal: the context window of the agent in view (the focused
 // pane's, else the agent Herdr shows), and the account's 5-hour and 7-day usage from
-// whichever Claude terminal wrote last. A window past its reset time counts as 0%.
+// whichever Claude terminal of that account wrote last. Accounts go by their email (the
+// `claude.email` label), so two subscriptions' usage never mix, whatever their number.
+// A window past its reset time counts as 0%.
 function usage(all, f) {
   const claude = all.filter(k => k.state === "live" && k.labels?.["claude.at"]);
   if (!claude.length) return null;
   const n = (k, key) => (k.labels[key] ? Number(k.labels[key]) : null);
   const shown = claude.find(k => k.address === f?.terminal) ?? claude.find(k => k.address === f?.agent);
-  const latest = claude.reduce((a, b) => (n(b, "claude.at") > n(a, "claude.at") ? b : a));
+  const account = (k) => k.labels["claude.email"] ?? "";
+  const same = shown ? claude.filter(k => account(k) === account(shown)) : claude;
+  const latest = same.reduce((a, b) => (n(b, "claude.at") > n(a, "claude.at") ? b : a));
   const now = Date.now() / 1000;
   const limit = (key) => {
     const pct = n(latest, `claude.${key}`);

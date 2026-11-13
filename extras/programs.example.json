@@ -1,0 +1,16 @@
+{
+  "programs": {
+    "claude-work": {
+      "name": "Claude Work",
+      "icon": "icons/claude.svg",
+      "run": ["claude"],
+      "tint": false
+    },
+    "claude-personal": {
+      "name": "Claude Personal",
+      "icon": "icons/claude.svg",
+      "run": ["env", "CLAUDE_CONFIG_DIR=/Users/you/.claude-personal", "claude"],
+      "tint": false
+    }
+  }
+}

@@ -73,9 +73,14 @@ fi
 # Claude Code ends what the status line leaves behind. Cached only once written.
 # Once Herdr has them, its bar shows them: this line stays empty. If the write fails,
 # the line shows as usual, so the figures are never lost.
+# `claude.email`: the account's email, from the config Claude runs with
+# ($CLAUDE_CONFIG_DIR/.claude.json, else ~/.claude.json), shown on Herdr's agent cards; its
+# status bar keeps each account's 5h and 7-day usage apart by it.
 if [ -n "$HC_TERMINAL_ID" ] && command -v hc >/dev/null 2>&1; then
+  account_file="${CLAUDE_CONFIG_DIR:+$CLAUDE_CONFIG_DIR/.claude.json}"
+  email=$(jq -r '.oauthAccount.emailAddress // empty' "${account_file:-$HOME/.claude.json}" 2>/dev/null)
   herdr=(
-    "claude.model=$model"
+    "claude.email=$email" "claude.model=$model"
     "claude.ctx_used=$used_tokens" "claude.ctx_size=$max_tokens" "claude.ctx_pct=$pct"
     "claude.five=$five" "claude.five_reset=$(echo "$input" | jq -r '.rate_limits.five_hour.resets_at // empty')"
     "claude.week=$week" "claude.week_reset=$(echo "$input" | jq -r '.rate_limits.seven_day.resets_at // empty')"

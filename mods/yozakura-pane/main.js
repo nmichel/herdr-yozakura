@@ -33,11 +33,15 @@ function icon(p, size, color) {
 }
 
 // The agent's activity, as in yozakura-agents: working spins, blocked (waiting for you)
-// warns, idle and done show a green dot. A pane without an agent has no status.
-function status(t, s) {
+// warns, idle and done show a green dot (a green spinner while background commands run).
+// A pane without an agent has no status.
+function status(t, s, busy = false) {
   const slot = h_flex().size(14).flex_none().items_center().justify_center();
   if (s === "working") return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.working).spin(900));
   if (s === "blocked") return slot.child(svg("mods/yozakura-agents/warning.svg").size(14).text_color(t.blocked));
+  // Idle, with commands still running in its background (yozakura-agents finds them): the
+  // spinner, in idle green.
+  if (busy) return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.ansi2).spin(900));
   return slot.child(div().size(8).rounded(4).bg(t.ansi2));
 }
 
@@ -249,7 +253,7 @@ export default class Pane extends View {
       .when(Boolean(pic), (el) => el.child(pic))
       .child(div().flex_none().truncate().max_w(260).font_medium().when(on, (el) => el.font_semibold()).text_color(t.foreground).child(name))
       .child(div().flex_1().truncate().text_color(t.dim).child(folder(p.cwd)))
-      .when(Boolean(st), el => el.child(status(t, st)))
+      .when(Boolean(st), el => el.child(status(t, st, Boolean((shared("yozakura.background") ?? {})[p.terminal]))))
       // Always there on a docked terminal: back to a tab of its own.
       .when(Boolean(stay) && Boolean(p.terminal), el => el.child(div()
         .id(`ph-u-${pane}`)

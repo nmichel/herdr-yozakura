@@ -27,11 +27,15 @@ function find(node, id) {
 }
 
 // A pane's activity, as in yozakura-agents: working spins, blocked (waiting for you)
-// warns, idle and done show a green dot. A pane without an agent has no status.
-function status(t, s) {
+// warns, idle and done show a green dot (a green spinner while background commands run).
+// A pane without an agent has no status.
+function status(t, s, busy = false) {
   const slot = h_flex().size(14).flex_none().items_center().justify_center();
   if (s === "working") return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.working).spin(900));
   if (s === "blocked") return slot.child(svg("mods/yozakura-agents/warning.svg").size(14).text_color(t.blocked));
+  // Idle, with commands still running in its background (yozakura-agents finds them): the
+  // spinner, in idle green.
+  if (busy) return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.ansi2).spin(900));
   return slot.child(div().size(8).rounded(4).bg(t.ansi2));
 }
 
@@ -205,6 +209,7 @@ export default class Tabs extends View {
     const tabPanes = new Map();
     for (const p of panes()) tabPanes.set(p.tab, [...(tabPanes.get(p.tab) ?? []), p]);
     const titles = new Map(agents().map(a => [a.pane, a.title]));
+    const background = shared("yozakura.background") ?? {}; // terminal -> its background commands
     const button = (id, label, action, pill = false) => div().id(id).size(26).flex_none().flex().items_center().justify_center().rounded(6).text_color(t.dim)
       .when(pill, el => el.bg(t.surface).border(1).border_color(t.border)) // neutral pill, like a tab
       .hover(s => s.bg(t.hover).text_color(t.foreground))
@@ -248,7 +253,7 @@ export default class Tabs extends View {
         .child(div().max_w(170).truncate().child(c.zoomed ? `${name} Z` : name))
         .when(!lone, el => el.child(div().h(16).min_w(16).px(4).flex_none().flex().items_center().justify_center()
           .rounded(8).bg(t.raised).text_size(10.5).text_color(on ? t.accent : t.dim).child(String(ps.length))))
-        .when(Boolean(c.status), el => el.child(status(t, c.status)))
+        .when(Boolean(c.status), el => el.child(status(t, c.status, ps.some(q => background[q.terminal]))))
         // Closing a lone panel's desktop ends one terminal; a desktop of several closes panel by panel.
         .when(on && lone, el => el.child(div().id(`close-${c.id}`).text_color(t.dim).on_mouse_down("left", stop)
           .on_click((_e, cx) => { cx.stop_propagation(); run("tab.close", { id: c.id }); })
@@ -285,7 +290,7 @@ export default class Tabs extends View {
         })
         .when(Boolean(p.program?.icon), el => el.child(programIcon(p.program, 14, on ? t.accent : t.muted)))
         .child(div().max_w(170).truncate().child(p.zoomed ? `${name} Z` : name))
-        .when(Boolean(p.status), el => el.child(status(t, p.status)))
+        .when(Boolean(p.status), el => el.child(status(t, p.status, Boolean(background[p.terminal]))))
         .when(on, el => el.child(div().id(`pclose-${p.pane}`).text_color(t.dim).on_mouse_down("left", stop)
           .on_click((_e, cx) => { cx.stop_propagation(); run("pane.close", { pane: p.pane }); })
           .child(svg("mods/yozakura-pane/close.svg").size(12))));
@@ -319,7 +324,7 @@ export default class Tabs extends View {
       .child(h_flex().id("tab-scroll").flex_1().min_w(0).h_full().items_center().gap(3).overflow_x_scrollbar().children(shown.map(desktop)))
       // The buttons on the right share one card, like the sidebar's, flush with the main panel's right edge.
       .child(h_flex().id("tab-actions").flex_none().h_full().px(10).gap(2).items_center().rounded(14).bg(islandFill(t.chrome)).border(1).border_color(t.border)
-        .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
+        .child(button("tab-new", "+", () => openOverlay({ mod: "yozakura-new-menu", kind: "popup", width: 250, height: 512 })))
         .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/yozakura-tabs/file.svg")))
         .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/yozakura-tabs/changes.svg")))
         .child(panelButton("commits", "Commits", "mods/yozakura-tabs/commit.svg"))

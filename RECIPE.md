@@ -25,11 +25,15 @@ Every card has a 14 px radius and a 1 px `border`; cards are filled with the the
     Japanese pigment (`#4a8c84`, `#b97446`, `#4f72a6`, `#7c68ad`, `#5c8e5e`, `#b45a72`), its name,
     and only what's unusual under it: a yellow pill with branch and ↑/↓ counts. Worktree spaces
     sit under their repo's space; spaces are grouped by machine once another machine is known.
-  - Agents (half of the rest): "Agents" and a sort button (clock: by priority in sections Needs
-    you / Done / Working / Idle; layers: grouped by space). One card per agent: program icon and
-    space name; the session's title after a speech bubble; the folder (cut at its start), how long
-    in this state, the status; for Claude Code, its model and a context gauge (green < 50 %,
-    yellow < 80 %, red). The shown agent's card is outlined in the accent. Sub-agents hang under
+  - Agents (half of the rest): "Agents" and a sort button (screen: grouped by desktop, the
+    default; clock: by priority in sections Needs you / Done / Working / Idle; layers: grouped by
+    space). By desktop, the groups follow the bar's order; each header has the desktop's screen
+    icon (split for several panels), its name and, once there are several spaces, its space's
+    name. One card per agent: program icon and space name; the session's title after a speech
+    bubble; the folder (cut at its start), a terminal icon and a count when commands run in its
+    background (Claude Code), how long in this state, the status; for Claude Code, its model and
+    a context gauge (green < 50 %, yellow < 80 %, red), then the account's email under a person
+    icon. The shown agent's card is outlined in the accent. Sub-agents hang under
     their parent with tree lines. While an agent works, an animated dancer (one of seven:
     Godzilla, a cat, a maiko, a teddy bear, a samurai, a salaryman, a kabuki actor;
     `yozakura-agents/dancers/*.gif`) plays in its card's top right, 4 px from the top and 8 from
@@ -40,8 +44,8 @@ Every card has a 14 px radius and a 1 px `border`; cards are filled with the the
   - One pill per desktop (a Herdr tab): a screen icon (whole for one panel, split for several),
     its name, a count badge for several panels, the most urgent status; the shown one outlined
     and colored in the accent, with × when it has a single panel.
-  - On the right, a card: + (new terminal or agent, `new-menu`), Files, Changes, Commits (window
-    buttons too where the system draws none).
+  - On the right, a card: + (new terminal or agent, `yozakura-new-menu`), Files, Changes, Commits
+    (window buttons too where the system draws none).
   - Under it (30 px), when the shown desktop has several panels: one pill per panel (program
     icon, session title or program name, status); the focused one outlined in the accent, with ×.
 - **Panes**: the shown desktop's panels as cards (12 px gap), terminals with 16×14 px padding
@@ -51,7 +55,8 @@ Every card has a 14 px radius and a 1 px `border`; cards are filled with the the
   semibold name.
 - **Side panel** (368 px, hidden until opened from the bar): Files, Changes or Commits.
 - **Status bar** (32 px): the folder and branch of the terminal in view; how many agents, how
-  many work, how many wait for you; Claude's context window, 5-hour and 7-day usage as gauges.
+  many work, how many wait for you; Claude's context window, 5-hour and 7-day usage as gauges
+  (the usage of the shown agent's account).
 
 Theme `yozakura` (`themes/yozakura.json`, the layout's own): background `#1c1e29`, text
 `#ddd5c5`, accent `#e9a3b5`, working `#e3bb72`, blocked `#ee8a68`, done `#84acd6`, idle `#74778a`.
@@ -59,7 +64,18 @@ Theme `yozakura` (`themes/yozakura.json`, the layout's own): background `#1c1e29
 ## How it behaves
 
 - Statuses everywhere: working spins (`working` color), blocked shows a warning (`blocked`
-  color), idle and done show a green dot. A space only speaks up when something in it needs you.
+  color), idle and done show a green dot. An idle or done Claude Code agent with commands still
+  running in its background spins in green instead (agent cards, thumbnails, pane headers): it
+  does nothing, but something runs. A space only speaks up when something in it needs you.
+- Background commands: every 3 s, `yozakura-agents` lists the shells Claude Code runs its
+  commands in (`ps`, arguments holding `shell-snapshots`) under each local Claude agent's
+  process (`hc get`: `foreground.pid`). While the agent works, only shells older than its turn
+  count: the others may be the turn's own. A command started during a turn therefore shows once
+  the turn ends. Sub-agents running in the background don't show.
+- The + menu: Herdr's agents, and the entries of `programs.json` with a `run`; a built-in agent
+  that starts the same command as one of these is left out, so two Claude accounts read
+  "Claude Work" and "Claude Personal" rather than three Claudes. Agents start in an unnamed
+  desktop, which then shows the session's title.
 - Desktops: a click on another desktop shows it (`tab.select`). A click on the shown one opens a
   name field under its thumbnail, focused with the name selected: Enter or leaving the field
   renames (empty: back to its default, the first panel's title), Esc or another click closes.
@@ -113,19 +129,23 @@ Mods (each `place: "none"`):
 - `yozakura-spaces`: spaces list; runs `git status`/`rev-parse` (`exec`, on the space's machine)
   and `hc machine ls`; watches the repos it shows.
 - `yozakura-agents`: agents list, sort popup (`props: {sortMenu: true}`), dancers, the safety
-  net that brings lost terminals back (`terminal.keep`).
+  net that brings lost terminals back (`terminal.keep`), the background commands' scan (`exec`
+  of `ps`, `hc get`).
 - `yozakura-tabs`: the bar; also the desktop name field (`props: {desktop}`, a popup).
 - `yozakura-pane`: pane headers, drop zones, dock (`terminal.park` + `terminal.keep` +
   `pane.swap`) and undock.
 - `yozakura-status`: the status bar.
+- `yozakura-new-menu`: the + popup; reads `programs.json` (`readTextFile`).
 
-Shipped mods used: `files`, `changes`, `git-history`, `menu`, `new-menu`, `picker`,
+Shipped mods used: `files`, `changes`, `git-history`, `menu`, `picker`,
 `machine-add`, and `frame/welcome/herdr.png`.
 Shared keys: `yozakura.opacity`, `yozakura.mainOpacity`, `yozakura.dock.drag`,
-`yozakura.dock.undock` (this layout's); `agents.sort`, `sidebar.width`, `sidebar.collapsed`,
-`space.colors`, `workspace.panels` (shared with the shipped mods on purpose).
+`yozakura.dock.undock`, `yozakura.agents.sort`, `yozakura.background` (address → count of
+background commands) (this layout's); `sidebar.width`, `sidebar.collapsed`, `space.colors`,
+`workspace.panels`, `new-menu.agents` (shared with the shipped mods on purpose).
 Claude figures: `claude.*` labels on each Claude Code terminal, written by
-`extras/claude-statusline.sh` (Claude Code's `statusLine` command; needs `jq` and `hc`).
+`extras/claude-statusline.sh` (Claude Code's `statusLine` command; needs `jq` and `hc`);
+`claude.email` comes from the account's `.claude.json` and tells accounts apart.
 Art: `backgrounds/yozakura-night.png` (drawn by `extras/yozakura-background.py`, which writes the
 SVG), the seven dancer GIFs (9 frames at 160 ms, looping, transparent; each cropped
 to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide), the screen icons.
@@ -161,7 +181,7 @@ to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide)
 
 ## Done when
 
-- `herdr-app check` passes for the six `yozakura-*` mods; `layout.switch {name: "yozakura"}`
+- `herdr-app check` passes for the seven `yozakura-*` mods; `layout.switch {name: "yozakura"}`
   shows the window above with no `layout.error` and no error in `herdr-app status`.
 - Settings shows the layout with its preview and offers the `yozakura` theme only there.
 - An agent that works has a dancer on its card; it goes when the agent stops.
@@ -171,3 +191,7 @@ to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide)
   bar, the focus stays on the panel it left, and no "Terminal brought back" toast follows.
 - Only the focused panel's header is tinted pink.
 - Focusing the pane of an agent whose card is scrolled out of the list brings the card into view.
+- With `extras/programs.example.json` as `programs.json`, + offers Claude Work and Claude
+  Personal, and no Claude Code.
+- A Claude Code agent that ends its turn with a command in the background (`sleep 60`) spins
+  in green, its card counts 1, within 3 s; both go when the command ends.

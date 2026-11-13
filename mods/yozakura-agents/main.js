@@ -5,7 +5,7 @@
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex, ScrollHandle } from "gpui-base";
-import { agents, terminals, panes, focused, home, run, notify, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout } from "herdr";
+import { agents, spaces, terminals, panes, focused, home, run, notify, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout, exec, hc } from "herdr";
 
 // How long a terminal may be without a tab before it's brought back (see recover()).
 const LOST_GRACE = 10000;
@@ -49,6 +49,21 @@ function sessionTitle(a) {
   return a.tab_name && !/^(tb)?\d+$/.test(a.tab_name) ? a.tab_name : null;
 }
 
+// A desktop's name as its thumbnail at the top shows it (yozakura-tabs): the name someone gave
+// it, else its first panel's (its session's title, else its program; a mod pane: its title).
+// A name Herdr gave a tab it made for a terminal (its program, its address) isn't a name.
+function desktopLabel(tab, ps, titles) {
+  const given = tab.named && !/^tb\d+$/.test(tab.name)
+    && !ps.some((p) => tab.name === p.program?.name || tab.name === p.terminal || tab.name === p.title);
+  if (given) return tab.name;
+  const p = ps[0];
+  if (!p) return tab.name;
+  if (!p.terminal) return p.title || p.program?.name || "Panel";
+  const live = clean(titles.get(p.pane) ?? p.title);
+  const telling = live && live !== p.program?.name && live.toLowerCase() !== p.program?.key && !/^[~/]|^[A-Za-z]:\\/.test(live) && !live.includes("@");
+  return telling ? live : p.program?.name ?? "Terminal";
+}
+
 // The status line's thresholds and its ANSI colors: green under 50%, yellow to 79%, red from 80%.
 const level = (t, p) => (p >= 80 ? t.ansi1 : p >= 50 ? t.ansi3 : t.ansi2);
 const GAUGE = 40;
@@ -65,11 +80,13 @@ const kidStatus = (k, listed) => {
   const s = listed.get(k.address) ?? k.status;
   return s === "error" ? "blocked" : s === "done" ? "idle" : s;
 };
+// The first is the default: grouped by desktop, in the order of the thumbnails at the top.
 const SORTS = [
+  { id: "desktop", label: "Grouped by desktop", icon: "monitor" },
   { id: "priority", label: "Priority", icon: "clock" },
   { id: "grouped", label: "Grouped by space", icon: "layers" },
 ];
-const sortOf = () => SORTS.find((s) => s.id === shared("agents.sort")) ?? SORTS[0];
+const sortOf = () => SORTS.find((s) => s.id === shared("yozakura.agents.sort")) ?? SORTS[0];
 const SECTION = { 4: "Needs you", 3: "Done", 2: "Working", 1: "Idle" };
 const SECTION_STATUS = { 4: "blocked", 3: "done", 2: "working" };
 // A status light rather than the theme's idle grey, readable on dark and light.
@@ -118,6 +135,58 @@ export default class Agents extends View {
     this.lost = new Map(); // address -> when it was first seen lost, or when to try again (ms)
     cx.timer.every(30000, (cx) => cx.notify());
     cx.timer.every(4000, (cx) => this.recover(cx));
+    this.background = new Map(); // address -> how many commands run in its background
+    // What a previous run shared is stale until the first scan.
+    if (Object.keys(shared("yozakura.background") ?? {}).length) setShared("yozakura.background", {});
+    cx.timer.every(3000, (cx) => this.scan(cx));
+  }
+
+  // Claude Code's background commands (run_in_background, a command sent to the background,
+  // a monitor): each runs in a shell of its own under the agent's claude process, recognizable
+  // by the shell snapshot it sources. A foreground command looks the same, but it never
+  // outlives the agent's turn: a shell alive while the agent isn't working, or started before
+  // its current turn, is in the background. One started during the turn counts once the turn
+  // ends. Background sub-agents run inside claude and aren't seen.
+  scan(cx) {
+    if (this.scanning) return;
+    const claude = agents().filter((a) => a.program?.key === "claude" && !a.address.includes("/"));
+    if (!claude.length) {
+      if (this.background.size) { this.background = new Map(); setShared("yozakura.background", {}); cx.notify(); }
+      return;
+    }
+    this.scanning = true;
+    cx.spawn(async (cx) => {
+      try {
+        const [ps, ...found] = await Promise.all([
+          exec("sh", ["-c", "ps -axo pid=,ppid=,etime=,args= | awk '/[s]hell-snapshots/ {print $1, $2, $3}'"]),
+          ...claude.map((a) => hc(["get", a.address]).catch(() => null)),
+        ]);
+        // etime: [[dd-]hh:]mm:ss
+        const age = (s) => {
+          const [d, rest] = s.includes("-") ? s.split("-") : ["0", s];
+          return rest.split(":").map(Number).reduce((sum, v) => sum * 60 + v, 0) + Number(d) * 86400;
+        };
+        const shells = ps.stdout.trim().split("\n").filter(Boolean).map((line) => {
+          const [, ppid, etime] = line.trim().split(/\s+/);
+          return { ppid: Number(ppid), age: age(etime) };
+        });
+        const now = Date.now();
+        const next = new Map();
+        claude.forEach((a, i) => {
+          let pid = null;
+          try { pid = JSON.parse(found[i]?.stdout ?? "null")?.foreground?.pid ?? null; } catch {}
+          if (!pid) return;
+          const turn = a.status === "working" ? this.since(a) - 3000 : Infinity;
+          const n = shells.filter((s) => s.ppid === pid && now - s.age * 1000 < turn).length;
+          if (n) next.set(a.address, n);
+        });
+        const same = next.size === this.background.size && [...next].every(([k, v]) => this.background.get(k) === v);
+        // Shared with yozakura-tabs and yozakura-pane, whose status icons show it too.
+        if (!same) { this.background = next; setShared("yozakura.background", Object.fromEntries(next)); cx.notify(); }
+      }
+      catch {}
+      finally { this.scanning = false; }
+    });
   }
 
   // A terminal Herdr showed (its `where` label) that has no tab anymore: no space or tab
@@ -243,7 +312,7 @@ export default class Agents extends View {
         .text_color(t.foreground)
         .hover((el) => el.bg(t.hover))
         .on_click(() => {
-          setShared("agents.sort", s.id);
+          setShared("yozakura.agents.sort", s.id);
           closeOverlay(props().overlay);
         })
         .child(svg(`mods/yozakura-chrome/${s.icon}.svg`).size(14).flex_none().text_color(t.muted))
@@ -294,11 +363,14 @@ export default class Agents extends View {
   }
 
   // The activity on the right of a row, in a 14px slot so every row lines up:
-  // working spins, blocked (waiting for you) warns, idle and done show a green dot.
+  // working spins, blocked (waiting for you) warns, idle and done show a green dot; idle with
+  // commands still running in its background, a green spinner: nothing to do, but busy.
   status(t, a) {
     const slot = h_flex().size(14).flex_none().items_center().justify_center();
     if (a.status === "working") return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.working).spin(900));
     if (a.status === "blocked") return slot.child(svg("mods/yozakura-agents/warning.svg").size(14).text_color(t.blocked));
+    if ((a.status === "idle" || a.status === "done") && this.background?.get(a.address))
+      return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.ansi2).spin(900));
     if (a.status === "idle" || a.status === "done") return slot.child(div().size(8).rounded(4).bg(t.ansi2));
     return slot;
   }
@@ -318,9 +390,16 @@ export default class Agents extends View {
     this.track(list, now);
     this.hold(list);
     const byPriority = sort.id === "priority";
+    const byDesktop = sort.id === "desktop";
+    // Each desktop (tab): its space's position, then its own, as the thumbnails at the top go.
+    const spaceList = spaces();
+    const desks = new Map();
+    spaceList.forEach((sp, si) => sp.tabs.forEach((tab) => desks.set(tab.id, { order: si * 10000 + tab.index, tab, space: sp })));
     const urgency = new Map(list.map((a) => [a.address, Math.max(this.rank(a), ...this.tree(all, a.address).map((s) => RANK[kidStatus(s.t, this.listed)] ?? 0))]));
     const rankOf = (a) => urgency.get(a.address);
     if (byPriority) list = [...list].sort((x, y) => rankOf(y) - rankOf(x) || this.since(y) - this.since(x) || y.seq - x.seq);
+    const deskOrder = (a) => desks.get(a.tab)?.order ?? Infinity;
+    if (byDesktop) list = [...list].sort((x, y) => deskOrder(x) - deskOrder(y));
     const pinned = list.filter((a) => a.pinned);
     const rest = list.filter((a) => !a.pinned);
     list = [...pinned, ...rest];
@@ -368,7 +447,8 @@ export default class Agents extends View {
     const folder = (cwd) => !cwd ? "" : cwd === h ? "~" : cwd.startsWith(h + "/") ? "~" + cwd.slice(h.length) : cwd;
 
     // A card per agent: its icon and space; its session's title; its folder, with how long
-    // it has been in its state and that state on the right; then Claude's model and context window.
+    // it has been in its state and that state on the right; then Claude's model and context
+    // window, and the email of the account it runs on.
     const row = (a, i, subs = []) => {
       const pic = icon(a.program, 16, t.foreground);
       // An agent on another machine (`vps/t7`) says which.
@@ -412,6 +492,7 @@ export default class Agents extends View {
       const n = (key) => Number(c?.[key] ?? 0);
       const named = sessionTitle(a);
       const dancing = a.status === "working";
+      const background = this.background?.get(a.address) ?? 0;
       return v_flex()
         .id(`ag-${a.address}`)
         .relative() // the dancer's corner
@@ -462,6 +543,11 @@ export default class Agents extends View {
         .child(h_flex().h(16).gap(6).items_center().text_size(11.5).when(dancing && !named, (el) => el.pr(42)) // under the dancer when second
           .child(svg("mods/yozakura-chrome/folder.svg").size(12).flex_none().text_color(t.ansi4))
           .child(div().flex_1().min_w(0).overflow_hidden().whitespace_nowrap().text_ellipsis_start().text_color(t.dim).child(folder(cwds.get(a.pane))))
+          // Commands still running in its background (see scan), and how many.
+          .when(background > 0, el => el.child(h_flex().id(`bg-${a.address}`).flex_none().gap(3).items_center().text_size(11).text_color(t.working)
+            .tooltip(background === 1 ? "1 background task" : `${background} background tasks`)
+            .child(svg("mods/yozakura-agents/background.svg").size(12))
+            .child(String(background))))
           .when(Boolean(when), el => el.child(div().flex_none().text_size(11).text_color(t.dim).child(duration(now - when))))
           .child(this.status(t, a)))
         // Claude's model and context window, as in the status bar.
@@ -469,16 +555,36 @@ export default class Agents extends View {
           .child(div().min_w(0).truncate().text_color(t.muted).child(c["claude.model"] ?? ""))
           .child(gauge(t, n("claude.ctx_pct")))
           .child(div().flex_none().text_color(t.dim).child(`(${Math.floor(n("claude.ctx_used") / 1000)}k/${Math.floor(n("claude.ctx_size") / 1000)}k)`))
-          .child(div().flex_none().text_color(level(t, n("claude.ctx_pct"))).child(`${n("claude.ctx_pct")}%`))));
+          .child(div().flex_none().text_color(level(t, n("claude.ctx_pct"))).child(`${n("claude.ctx_pct")}%`))))
+        // The account it runs on: its email (`claude.email`), when the status line knows it.
+        .when(Boolean(c?.["claude.email"]), el => el.child(h_flex().h(16).gap(6).items_center().text_size(11)
+          .child(svg("mods/yozakura-agents/account.svg").size(12).flex_none().text_color(t.ansi5))
+          .child(div().flex_1().min_w(0).truncate().text_color(t.dim).child(c["claude.email"]))));
     };
 
-    // Groups in list order: spaces (grouped) or priority sections. Agents of a
-    // space are next to each other in agents(), so neighbours make a group.
+    // Groups in list order: desktops, spaces (grouped) or priority sections. Agents of a
+    // space are next to each other in agents(), and the desktop sort puts each desktop's
+    // together, so neighbours make a group. A desktop's header has its thumbnail's name and
+    // screen; its space too when there are several.
+    const tabPanes = new Map();
+    if (byDesktop) for (const p of panes()) tabPanes.set(p.tab, [...(tabPanes.get(p.tab) ?? []), p]);
+    const titles = new Map(list.map((a) => [a.pane, a.title]));
+    const desktopGroup = (a) => {
+      const d = desks.get(a.tab);
+      if (!d) return { label: a.tab_name || a.space_name || "", icon: null, sub: null };
+      const ps = tabPanes.get(a.tab) ?? [];
+      return {
+        label: desktopLabel(d.tab, ps, titles),
+        icon: `mods/yozakura-tabs/${ps.length > 1 ? "desktop-split" : "desktop"}.svg`,
+        sub: spaceList.length > 1 ? d.space.name : null,
+      };
+    };
     const groups = pinned.length ? [{ id: "pinned", label: "Pinned", status: null, members: pinned }] : [];
     for (const a of rest) {
       const r = rankOf(a) || RANK.idle;
-      const id = byPriority ? `sec-${r}` : `sp-${a.space}`;
+      const id = byPriority ? `sec-${r}` : byDesktop ? `dt-${a.tab}` : `sp-${a.space}`;
       if (groups.at(-1)?.id === id) groups.at(-1).members.push(a);
+      else if (byDesktop) groups.push({ id, ...desktopGroup(a), status: null, members: [a] });
       else groups.push({ id, label: byPriority ? SECTION[r] : a.space_name || "", status: byPriority ? SECTION_STATUS[r] : null, members: [a] });
     }
 
@@ -502,7 +608,9 @@ export default class Agents extends View {
           open ? this.folded.add(g.id) : this.folded.delete(g.id);
           cx.notify();
         })
+        .when(Boolean(g.icon), (el) => el.child(svg(g.icon).size(12).flex_none().text_color(t.dim)))
         .child(div().min_w(0).truncate().text_color(t[g.status] ?? t.dim).child(g.label))
+        .when(Boolean(g.sub), (el) => el.child(div().flex_none().text_color(t.dim).opacity(0.7).child(g.sub)))
         .when(byPriority || !open, (el) => el.child(div().text_color(t.dim).child(String(g.members.length))))
         .child(div().flex_1())
         .when(!open, (el) => el
@@ -556,7 +664,7 @@ export default class Agents extends View {
                 .text_size(11)
                 .text_color(t.dim)
                 .hover((s) => s.text_color(t.foreground))
-                .on_click(() => openOverlay({ mod: "yozakura-agents", kind: "popup", width: 200, height: 140, props: { sortMenu: true } }))
+                .on_click(() => openOverlay({ mod: "yozakura-agents", kind: "popup", width: 210, height: 172, props: { sortMenu: true } }))
                 .tooltip(`Sort agents: ${sort.label}`)
                 .child(svg(`mods/yozakura-chrome/${sort.icon}.svg`).size(14)),
             ),

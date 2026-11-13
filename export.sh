@@ -9,7 +9,7 @@ set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
 home="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
-mods=(yozakura-agents yozakura-chrome yozakura-pane yozakura-spaces yozakura-status yozakura-tabs)
+mods=(yozakura-agents yozakura-chrome yozakura-new-menu yozakura-pane yozakura-spaces yozakura-status yozakura-tabs)
 
 mkdir -p "$here/layouts" "$here/mods" "$here/themes" "$here/backgrounds" "$here/extras"
 cp "$home/layouts/yozakura.json" "$home/layouts/yozakura.svg" "$here/layouts/"
