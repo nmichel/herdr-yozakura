@@ -64,12 +64,13 @@ light appearance and Yūgure in the dark one (`"theme": {"light": "harugasumi", 
 
 | Theme | Cards, terminals | Text | Secondary text | Accent | Sky |
 |---|---|---|---|---|---|
-| `tsukiyo` (月夜, moonlit night) | `#1c1e29` | `#ddd5c5` | Herdr's greys | `#e9a3b5` | night, `#262940` to `#14151d` |
+| `tsukiyo` (月夜, moonlit night) | `#1c1e29` | `#ddd5c5` | `#bdb6aa`, `#948e85` | `#e9a3b5` | night, `#262940` to `#14151d` |
 | `yugure` (夕暮れ, dusk) | `#2a2d3d` | `#ebe4d6` | `#c3bcb0`, `#a29c93` | `#efb0c0` | glycine violet, `#4b4870` to `#34364b` |
 | `harugasumi` (春霞, spring haze, light) | `#f3eee5` | `#3a3741` | `#5c5763`, `#6a6462` | `#a5455e` | pale haze, gold mist, a pale sun |
 
-Yūgure and Haru-gasumi set the panels' text colors themselves (Herdr derives neutral greys
-otherwise): every text and status color they use is at least 4.5:1 against the cards.
+Each sets the panels' text colors itself, in warm greys (Herdr derives neutral ones otherwise,
+the dimmest at 3.2:1 on Tsukiyo's cards): every text and status color is at least 4.5:1
+against the cards.
 
 ## How it behaves
 
