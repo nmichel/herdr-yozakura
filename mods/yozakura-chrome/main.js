@@ -72,6 +72,9 @@ function applyLook() {
   const cardsChanged = CARDS.some((id) => {
     const node = find(root, id);
     return node && Object.keys(card).some((k) => JSON.stringify(node[k]) !== JSON.stringify(card[k]));
+  }) || SIDE.some((id) => {
+    const node = find(root, id);
+    return node && Object.keys(card).some((k) => JSON.stringify(node[k]) !== JSON.stringify(kit ? card[k] : undefined));
   });
   const sky = SKIES[name];
   const skyChanged = sky && root.background?.image !== sky;
@@ -84,10 +87,19 @@ function applyLook() {
     Object.assign(node, card);
     if (!card.background) delete node.background;
   }
+  for (const id of SIDE) {
+    const node = find(next, id);
+    if (!node) continue;
+    if (kit) Object.assign(node, card);
+    else for (const k of Object.keys(card)) delete node[k];
+  }
   if (skyChanged) next.background = { ...(next.background ?? {}), image: sky };
   run("layout.set", { layout: next });
 }
 const CARDS = ["brand", "spaces", "agents", "sidebar-footer", "status"];
+// The side panel's blocks (yozakura-files, -changes, -history): cards like the others with
+// shoji; without, their mods draw their own card, so the layout gives them nothing.
+const SIDE = ["files", "changes", "commits"];
 
 // The wood of a shoji rail, `h` px tall: its texture's strips side by side (as wide as any
 // card), and a line under it unless the rail is the whole card.

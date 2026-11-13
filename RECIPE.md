@@ -64,7 +64,8 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
   end to end; Spaces and Agents have a 31 px rail as their header; the desktop and panel
   thumbnails are paper plaques in a 2 px wooden frame (the accent for the shown one), the
   bar's buttons a paper card in a 4 px frame.
-- **Side panel** (368 px, hidden until opened from the bar): Files, Changes or Commits.
+- **Side panel** (368 px, hidden until opened from the bar): Files, Changes or Commits, cards like
+  the others (with shoji, a rail of wood as their header; their buttons and counts in the kit's inks).
 - **Status bar** (32 px): the folder and branch of the terminal in view; how many agents, how
   many work, how many wait for you; Claude's context window, 5-hour and 7-day usage as gauges
   (the usage of the shown agent's account).
@@ -138,7 +139,8 @@ root (row; background image, titlebar none, theme yozakura)
    ├─ **tabs**     block  yozakura-tabs                   38 px (the mod resizes it), window_drag
    ├─ work-body (row)
    │  ├─ **main**  block  { tab: active, pane: header yozakura-pane 30 px, lone, radius 14 }
-   │  └─ **panel** column 368 px, hidden → **panel-body** stack: files, changes, commits (git-history)
+   │  └─ **panel** column 368 px, hidden → **panel-body** stack: files (yozakura-files), changes
+   │                 (yozakura-changes), commits (yozakura-history)
    └─ status       block  yozakura-status                 32 px
 ```
 
@@ -163,8 +165,11 @@ Mods (each `place: "none"`):
   `pane.swap`) and undock.
 - `yozakura-status`: the status bar.
 - `yozakura-new-menu`: the + popup; reads `programs.json` (`readTextFile`).
+- `yozakura-files`, `yozakura-changes`, `yozakura-history`: the side panel's Files, Changes and
+  Commits, Herdr's own panels (they read files and run `git`) restyled; the layout's blocks
+  `files`, `changes`, `commits` get their frame and paper from `yozakura-chrome` (`SIDE`).
 
-Shipped mods used: `files`, `changes`, `git-history`, `menu`, `picker`,
+Shipped mods used: `menu`, `picker`,
 `machine-add`, and `frame/welcome/herdr.png`.
 Shared keys: `yozakura.opacity`, `yozakura.mainOpacity`, `yozakura.dock.drag`,
 `yozakura.dock.undock`, `yozakura.agents.sort`, `yozakura.background` (address → count of
@@ -241,7 +246,7 @@ real one (agent cards show account emails):
 
 ## Done when
 
-- `herdr-app check` passes for the seven `yozakura-*` mods; `layout.switch {name: "yozakura"}`
+- `herdr-app check` passes for the ten `yozakura-*` mods; `layout.switch {name: "yozakura"}`
   shows the window above with no `layout.error` and no error in `herdr-app status`.
 - Settings shows the layout with its preview; Settings → Theme offers `tsukiyo`, `yugure` and
   `harugasumi`, and picking one puts its sky behind the cards within a second.

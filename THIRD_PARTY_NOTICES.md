@@ -20,6 +20,9 @@ Herdr ships, and modified; each `main.js` says so at its top:
 | `mods/yozakura-status` | `workspace-status` |
 | `mods/yozakura-pane` | `pane` |
 | `mods/yozakura-new-menu` | `new-menu` |
+| `mods/yozakura-files` | `files` |
+| `mods/yozakura-changes` | `changes` |
+| `mods/yozakura-history` | `git-history` |
 
 Icons copied unchanged from Herdr's shipped mods:
 
@@ -27,7 +30,9 @@ Icons copied unchanged from Herdr's shipped mods:
 - `mods/yozakura-pane/{close,split-down,split-right,zoom,unzoom}.svg`, from `pane`;
 - `mods/yozakura-tabs/{win-min,win-max,win-restore,win-close}.svg`, from `tabs`;
 - `mods/yozakura-tabs/file.svg`, `changes.svg`, `commit.svg`, from `files`, `changes` and
-  `git-history`.
+  `git-history`;
+- `mods/yozakura-files/*.svg`, `mods/yozakura-changes/*.svg`, `mods/yozakura-history/*.svg`,
+  from `files`, `changes` and `git-history`.
 
 ## Lucide: ISC License
 

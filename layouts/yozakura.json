@@ -97,7 +97,7 @@
         }
       ],
       "size": {
-        "px": 271
+        "px": 295
       },
       "min": 44,
       "max": 480,
@@ -167,22 +167,49 @@
                       "id": "files",
                       "type": "block",
                       "content": {
-                        "mod": "files"
-                      }
+                        "mod": "yozakura-files"
+                      },
+                      "background": {
+                        "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                        "fit": "cover"
+                      },
+                      "border": {
+                        "width": 4,
+                        "color": "#c8a978"
+                      },
+                      "radius": 4
                     },
                     {
                       "id": "changes",
                       "type": "block",
                       "content": {
-                        "mod": "changes"
-                      }
+                        "mod": "yozakura-changes"
+                      },
+                      "background": {
+                        "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                        "fit": "cover"
+                      },
+                      "border": {
+                        "width": 4,
+                        "color": "#c8a978"
+                      },
+                      "radius": 4
                     },
                     {
                       "id": "commits",
                       "type": "block",
                       "content": {
-                        "mod": "git-history"
-                      }
+                        "mod": "yozakura-history"
+                      },
+                      "background": {
+                        "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                        "fit": "cover"
+                      },
+                      "border": {
+                        "width": 4,
+                        "color": "#c8a978"
+                      },
+                      "radius": 4
                     }
                   ],
                   "active": "commits"
@@ -192,8 +219,7 @@
                 "px": 368
               },
               "min": 280,
-              "max": 900,
-              "hidden": true
+              "max": 900
             }
           ],
           "padding": 0,

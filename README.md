@@ -35,9 +35,10 @@ Three themes, each with its own sky and shoji; Settings → Theme switches betwe
 
 The previews show a demo window: pretend agents, no real session.
 
-The mods run `git` (the spaces list), `hc machine ls`, and `hc get` and `ps` (the agents list,
-to see the commands Claude Code runs in the background); they read their own `settings.json`
-and Herdr's `programs.json`, and reach no network.
+The mods run `git` (the spaces list and the side panel), `hc machine ls`, and `hc get` and `ps`
+(the agents list, to see the commands Claude Code runs in the background); they read their own
+`settings.json`, Herdr's `programs.json` and the files the Files panel shows. They reach no
+network, except Commits' Fetch button (`git fetch`, when clicked).
 
 ## Agents in the + menu
 
