@@ -1,7 +1,6 @@
 {
   "id": "root",
   "type": "row",
-  "theme": "yozakura",
   "children": [
     {
       "id": "sidebar",
@@ -82,7 +81,7 @@
         }
       ],
       "size": {
-        "px": 268
+        "px": 271
       },
       "min": 44,
       "max": 480,
@@ -100,7 +99,7 @@
             "mod": "yozakura-tabs"
           },
           "size": {
-            "px": 38
+            "px": 74
           },
           "window_drag": true
         },
@@ -122,7 +121,7 @@
                     "height": 30,
                     "position": "top"
                   },
-                  "background": "#1c1e29d9",
+                  "background": "#f3eee5d9",
                   "border": {
                     "width": 1,
                     "color": "border"
@@ -202,10 +201,14 @@
     }
   ],
   "background": {
-    "image": "backgrounds/yozakura-night.png",
+    "image": "backgrounds/harugasumi.png",
     "fit": "cover"
   },
   "padding": 12,
+  "theme": {
+    "light": "harugasumi",
+    "dark": "yugure"
+  },
   "terminal_padding": [
     16,
     14

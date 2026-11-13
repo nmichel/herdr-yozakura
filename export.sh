@@ -13,8 +13,11 @@ mods=(yozakura-agents yozakura-chrome yozakura-new-menu yozakura-pane yozakura-s
 
 mkdir -p "$here/layouts" "$here/mods" "$here/themes" "$here/backgrounds" "$here/extras"
 cp "$home/layouts/yozakura.json" "$home/layouts/yozakura.svg" "$here/layouts/"
-cp "$home/themes/yozakura.json" "$here/themes/"
-cp "$home/backgrounds/yozakura-night.png" "$home/backgrounds/yozakura-night.svg" "$here/backgrounds/"
+# The layout's three themes, each with its sky (backgrounds/<theme>.png, and the SVG it's from).
+for theme in tsukiyo yugure harugasumi; do
+  cp "$home/themes/$theme.json" "$here/themes/"
+  cp "$home/backgrounds/$theme.png" "$home/backgrounds/$theme.svg" "$here/backgrounds/"
+done
 for m in "${mods[@]}"; do
   # The app (and `herdr-app check`) writes gpui-kit.d.ts and jsconfig.json into every mod
   # folder: not part of the mod, removed here too.

@@ -18,6 +18,16 @@ herdr-app do layout.switch --name yozakura
 
 `ctrl-shift-l` cycles back to your previous layout; deleting the copied files removes it.
 
+## Themes
+
+Three themes, each with its own sky behind the cards; Settings → Theme switches between them.
+
+- `tsukiyo` (月夜, moonlit night): the night sky of the preview.
+- `yugure` (夕暮れ, dusk): lighter, under a glycine-violet sky. Shown in the dark appearance.
+- `harugasumi` (春霞, spring haze): a light one, washi paper and ink under a pale sky. Shown in
+  the light appearance. Set Claude Code's `/theme` to a light one with it: its dark theme's
+  greys and message bands read poorly on paper.
+
 The mods run `git` (the spaces list), `hc machine ls`, and `hc get` and `ps` (the agents list,
 to see the commands Claude Code runs in the background); they read their own `settings.json`
 and Herdr's `programs.json`, and reach no network.
@@ -41,8 +51,9 @@ the menu, and replaces the built-in agent that starts the same command.
   and `hc`. With several accounts (a `CLAUDE_CONFIG_DIR` each), give each one this status line:
   the status bar keeps each account's usage apart by its email.
 - `extras/programs.example.json`: two Claude accounts in the + menu (see above).
-- `extras/yozakura-background.py`: draws the background as an SVG
-  (`python3 extras/yozakura-background.py out.svg`), to change and render again.
+- `extras/yozakura-background.py`: draws a theme's sky as an SVG
+  (`python3 extras/yozakura-background.py out.svg [tsukiyo|yugure|harugasumi]`), to change and
+  render again (3000×2000 PNG, under a new name: Herdr keeps an image it has loaded).
 - `extras/cropgif.swift`: crops an animated GIF to its figure (macOS, ImageIO), to add a
   dancer of your own; its header says how.
 - `mods/yozakura-chrome/settings.json`: `opacity` (cards) and `main_opacity` (panes), 0 to 1.

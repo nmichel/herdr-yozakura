@@ -12,8 +12,8 @@ focused panel's title bar is tinted pink.
 
 Left to right: a sidebar, then the work column. The window has no system title bar (macOS
 traffic lights at 12,16); the root has 12 px padding and 12 px gaps everywhere. Behind
-everything, `backgrounds/yozakura-night.png` (3000×2000, `cover`): a night sky from `#262940` to
-`#14151d`, a pale moon top right, a cherry branch across the top, mist bands, falling petals,
+everything, the theme's sky (`backgrounds/<theme>.png`, 3000×2000, `cover`): a sky, a pale moon
+(by day, a pale sun) top right, a cherry branch across the top, mist bands, falling petals,
 seigaiha waves at the bottom.
 
 Every card has a 14 px radius and a 1 px `border`; cards are filled with the theme's color at
@@ -58,8 +58,18 @@ Every card has a 14 px radius and a 1 px `border`; cards are filled with the the
   many work, how many wait for you; Claude's context window, 5-hour and 7-day usage as gauges
   (the usage of the shown agent's account).
 
-Theme `yozakura` (`themes/yozakura.json`, the layout's own): background `#1c1e29`, text
-`#ddd5c5`, accent `#e9a3b5`, working `#e3bb72`, blocked `#ee8a68`, done `#84acd6`, idle `#74778a`.
+Three themes (`themes/<name>.json`), each with its sky; the layout shows Haru-gasumi in the
+light appearance and Yūgure in the dark one (`"theme": {"light": "harugasumi", "dark":
+"yugure"}`), and Settings → Theme picks any of them for either:
+
+| Theme | Cards, terminals | Text | Secondary text | Accent | Sky |
+|---|---|---|---|---|---|
+| `tsukiyo` (月夜, moonlit night) | `#1c1e29` | `#ddd5c5` | Herdr's greys | `#e9a3b5` | night, `#262940` to `#14151d` |
+| `yugure` (夕暮れ, dusk) | `#2a2d3d` | `#ebe4d6` | `#c3bcb0`, `#a29c93` | `#efb0c0` | glycine violet, `#4b4870` to `#34364b` |
+| `harugasumi` (春霞, spring haze, light) | `#f3eee5` | `#3a3741` | `#5c5763`, `#6a6462` | `#a5455e` | pale haze, gold mist, a pale sun |
+
+Yūgure and Haru-gasumi set the panels' text colors themselves (Herdr derives neutral greys
+otherwise): every text and status color they use is at least 4.5:1 against the cards.
 
 ## How it behaves
 
@@ -124,7 +134,9 @@ Mods (each `place: "none"`):
 
 - `yozakura-chrome`: the brand card and, with `{footer: true}`, the footer. The brand copy reads
   its own `settings.json` (`readTextFile` + `watchFolder`), shares `yozakura.opacity` and
-  `yozakura.mainOpacity`, and rewrites the main pane's background in the layout (`layout.set`).
+  `yozakura.mainOpacity`, and rewrites the layout (`layout.set`) to match the theme shown: its
+  sky on the root, its background (faded) on the main pane; checked every second, so a theme
+  picked in Settings brings its sky.
   Holds the shared icons (Lucide-style SVGs) the other mods use.
 - `yozakura-spaces`: spaces list; runs `git status`/`rev-parse` (`exec`, on the space's machine)
   and `hc machine ls`; watches the repos it shows.
@@ -146,12 +158,18 @@ background commands) (this layout's); `sidebar.width`, `sidebar.collapsed`, `spa
 Claude figures: `claude.*` labels on each Claude Code terminal, written by
 `extras/claude-statusline.sh` (Claude Code's `statusLine` command; needs `jq` and `hc`);
 `claude.email` comes from the account's `.claude.json` and tells accounts apart.
-Art: `backgrounds/yozakura-night.png` (drawn by `extras/yozakura-background.py`, which writes the
-SVG), the seven dancer GIFs (9 frames at 160 ms, looping, transparent; each cropped
+Art: `backgrounds/{tsukiyo,yugure,harugasumi}.png` (drawn by `extras/yozakura-background.py`,
+which writes the SVG, one sky per theme), the seven dancer GIFs (9 frames at 160 ms, looping, transparent; each cropped
 to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide), the screen icons.
 
 ## Watch out
 
+- Herdr keeps an image it has loaded: a sky drawn again must go under a new file name (and in
+  `SKIES`, `yozakura-chrome`), or the window keeps the old one.
+- A light theme picked in Settings goes in the layout's `light` half, a dark one in its `dark`
+  half: the appearance (`appearance` in settings.json, else the system's) decides which shows.
+- Claude Code draws with its own theme: on Haru-gasumi, its dark theme's greys and the bands
+  behind your messages read poorly; its `/theme` has light ones.
 - `terminal.park` answers at once but the core finishes later: wait until the terminal has no
   pane **and** no `herdr.tab` label before `terminal.keep`, then until it has both again.
   A `keep` sent earlier is lost and the terminal ends up in no tab and no list.
@@ -183,7 +201,8 @@ to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide)
 
 - `herdr-app check` passes for the seven `yozakura-*` mods; `layout.switch {name: "yozakura"}`
   shows the window above with no `layout.error` and no error in `herdr-app status`.
-- Settings shows the layout with its preview and offers the `yozakura` theme only there.
+- Settings shows the layout with its preview; Settings → Theme offers `tsukiyo`, `yugure` and
+  `harugasumi`, and picking one puts its sky behind the cards within a second.
 - An agent that works has a dancer on its card; it goes when the agent stops.
 - With two panels in the shown desktop, the bar is 74 px with a pill per panel; with one, 38 px.
 - Clicking the shown desktop opens its name field; typing a name and Enter renames it.

@@ -2,7 +2,7 @@
 // See THIRD_PARTY_NOTICES.md in the yozakura repository.
 import { View, div, image, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
-import { theme, run, props, window, shared, setShared, updates, layout, appHome, readTextFile, watchFolder } from "herdr";
+import { theme, run, props, window, shared, setShared, updates, layout, settings, appHome, readTextFile, watchFolder } from "herdr";
 
 // A #rrggbb color at an opacity (0..1), as #rrggbbaa. Other colors stay as they are.
 const fade = (c, o) => typeof o !== "number" || o >= 1 || !/^#[0-9a-f]{6}$/i.test(c)
@@ -10,18 +10,33 @@ const fade = (c, o) => typeof o !== "number" || o >= 1 || !/^#[0-9a-f]{6}$/i.tes
 // The cards' fill at "opacity" in this mod's settings.json (1 when unset).
 const islandFill = (c) => fade(c, shared("yozakura.opacity"));
 
-// The main panel's fill comes from the layout, not a mod, so "main_opacity" rewrites
-// the main pane's background there: the theme's background, faded. At 1 it goes back
-// to the plain theme color. Only writes when the value differs.
-function applyMainOpacity() {
+// Each of the layout's themes (tsukiyo, yugure, harugasumi) brings its own sky, drawn by
+// backgrounds/yozakura.py: picking one (Settings → Theme writes it on the layout's root,
+// for the light or the dark appearance) puts its sky behind the cards. Other themes keep
+// the sky shown.
+const SKIES = {
+  "tsukiyo": "backgrounds/tsukiyo.png",
+  "yugure": "backgrounds/yugure.png",
+  "harugasumi": "backgrounds/harugasumi.png",
+};
+
+// What the layout should hold for the theme shown, rewritten there since it isn't a mod's:
+// the sky, and the main pane's fill, which "main_opacity" fades (the theme's background at
+// that opacity; at 1, the plain theme color). Only writes when something differs; runs at
+// start, when settings.json changes, and every second, to follow a theme picked meanwhile.
+function applyLook() {
   const root = layout();
   const pane = find(root, "main")?.content?.pane;
   if (!pane) return;
   const o = shared("yozakura.mainOpacity");
-  const want = typeof o === "number" && o < 1 ? fade(theme().background, o) : "background";
-  if (pane.background === want) return;
+  const fill = typeof o === "number" && o < 1 ? fade(theme().background, o) : "background";
+  const name = typeof root.theme === "string" ? root.theme : root.theme?.[settings()?.dark ? "dark" : "light"];
+  const sky = SKIES[name];
+  const skyChanged = sky && root.background?.image !== sky;
+  if (pane.background === fill && !skyChanged) return;
   const next = JSON.parse(JSON.stringify(root));
-  find(next, "main").content.pane.background = want;
+  find(next, "main").content.pane.background = fill;
+  if (skyChanged) next.background = { ...(next.background ?? {}), image: sky };
   run("layout.set", { layout: next });
 }
 
@@ -60,10 +75,11 @@ export default class WorkspaceChrome extends View {
         const o = clamp(s.opacity), main = clamp(s.main_opacity);
         if (shared("yozakura.opacity") !== o) setShared("yozakura.opacity", o);
         if (shared("yozakura.mainOpacity") !== main) setShared("yozakura.mainOpacity", main);
-        applyMainOpacity();
+        applyLook();
         await watchFolder(dir);
       }
     });
+    cx.timer.every(1000, () => applyLook());
   }
   button(id, label, action) {
     const t = theme();
