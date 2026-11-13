@@ -76,7 +76,9 @@ Theme `yozakura` (`themes/yozakura.json`, the layout's own): background `#1c1e29
   its own after 10 s, with a toast that goes to it.
 - Agents: click a card to show the agent; drag it to dock it; the pin (on hover) keeps it on
   top; the chevron folds its sub-agents. A finished agent you look at stays in Done until you
-  leave it.
+  leave it. Showing an agent (from its card, its pane or a shortcut) scrolls the list just
+  enough to bring its card into view (its group's header when the group is folded); it does so
+  again only when its card moves to another section, so scrolling away from it stays.
 - Spaces: click to switch, right-click for the menu, drag to reorder, + for a new space (in the
   home folder).
 - The side panel shown is remembered per space. The sidebar folds into a rail below 100 px
@@ -168,3 +170,4 @@ to its figure over all its frames by `extras/cropgif.swift`, 315 to 355 px wide)
 - Undocking a panel puts it in its own desktop within a second, its thumbnail appears in the
   bar, the focus stays on the panel it left, and no "Terminal brought back" toast follows.
 - Only the focused panel's header is tinted pink.
+- Focusing the pane of an agent whose card is scrolled out of the list brings the card into view.

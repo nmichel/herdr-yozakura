@@ -4,7 +4,7 @@
 // A viewed done agent stays in Done until left.
 
 import { View, div, image, svg } from "gpui-kit";
-import { v_flex, h_flex } from "gpui-base";
+import { v_flex, h_flex, ScrollHandle } from "gpui-base";
 import { agents, terminals, panes, focused, home, run, notify, theme, shared, setShared, setAgentOrder, openOverlay, closeOverlay, props, window, layout } from "herdr";
 
 // How long a terminal may be without a tab before it's brought back (see recover()).
@@ -106,6 +106,9 @@ export default class Agents extends View {
   init(_props, cx) {
     if (props()?.sortMenu) return;
     this.folded = new Set();
+    // The list's scroll, to bring the focused agent's card into view (see render).
+    this.scroll = ScrollHandle.new();
+    this.revealed = null;
     // Each agent's last state and when it changed (ms), kept across restarts.
     this.changed = JSON.parse(localStorage.getItem("changed") ?? "{}");
     this.pendingPins = JSON.parse(localStorage.getItem("pins") ?? "[]");
@@ -506,9 +509,27 @@ export default class Agents extends View {
           .when(!byPriority && top && top !== "idle", (el) => el.child(this.status(t, { status: top })))
           .child(svg("mods/yozakura-chrome/chevron-right.svg").size(11).flex_none().text_color(t.dim)));
     };
-    const rows = collapsed
-      ? list.flatMap(withKids)
-      : groups.flatMap((g) => [header(g), ...(this.folded.has(g.id) ? [] : g.members.flatMap(withKids))]);
+    // The rows, and which holds the focused agent's card (its group's header when folded).
+    const focusedAgent = list.find((a) => a.focused)?.address ?? null;
+    const rows = [];
+    let at = -1, where = "";
+    const add = (els, mine, group) => {
+      if (mine && at < 0) { at = rows.length; where = group; }
+      rows.push(...els);
+    };
+    if (collapsed) list.forEach((a, i) => add(withKids(a, i), a.address === focusedAgent, "rail"));
+    else for (const g of groups) {
+      const folded = this.folded.has(g.id);
+      add([header(g)], folded && g.members.some((a) => a.address === focusedAgent), g.id);
+      if (!folded) g.members.forEach((a, i) => add(withKids(a, i), a.address === focusedAgent, g.id));
+    }
+    // Scrolled into view when another agent is focused, or its card moves to another
+    // section; scrolling away from it otherwise stays.
+    const reveal = focusedAgent && `${focusedAgent} ${where}`;
+    if (reveal !== this.revealed && (at >= 0 || !focusedAgent)) {
+      this.revealed = reveal;
+      if (at >= 0) this.scroll.scroll_to_item(at);
+    }
 
     return v_flex()
       .size_full()
@@ -544,7 +565,7 @@ export default class Agents extends View {
       .when(list.length === 0 && !collapsed, (el) =>
         el.child(div().px(12).text_size(12).text_color(t.dim).child("No agent status yet. Agents show up here when they report their status. Older versions and agents inside tmux may not.")),
       )
-      .child(v_flex().id("ag-list").flex_1().min_h(0).px(collapsed ? 0 : 8).when(collapsed, (el) => el.items_center()).overflow_y_scrollbar().mode("always")
+      .child(v_flex().id("ag-list").flex_1().min_h(0).px(collapsed ? 0 : 8).when(collapsed, (el) => el.items_center()).overflow_y_scrollbar().mode("always").track_scroll(this.scroll)
         .on_mouse_up("left", () => this.endDock()) // a drag let go over the list ends
         .children(rows))
       .when(collapsed, (el) =>
