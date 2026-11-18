@@ -108,7 +108,7 @@ const SECTION_STATUS = { 4: "blocked", 3: "done", 2: "working" };
 // agents started one after another get different ones. Each GIF is cropped to its figure over
 // all its frames, and shown 40 px high at its own width (the crop's), so every dancer fills
 // its box whatever its shape: [name, width].
-const DANCERS = [["godzilla", 40], ["cat", 37], ["maiko", 34], ["teddy", 39], ["samurai", 34], ["salaryman", 35], ["kabuki", 36]];
+const DANCERS = [["godzilla", 40], ["cat", 37], ["maiko", 34], ["teddy", 39], ["samurai", 34], ["salaryman", 35], ["kabuki", 36], ["panda", 39]];
 const DANCER_HEIGHT = 40;
 function dancer(a) {
   let n = Number.isInteger(a.seq) ? a.seq : 0;
