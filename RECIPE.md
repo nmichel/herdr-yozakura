@@ -39,8 +39,9 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
     background (Claude Code), how long in this state, the status; for Claude Code, its model and
     a context gauge (green < 50 %, yellow < 80 %, red), then the account's email under a person
     icon. The shown agent's card is outlined in the accent. Sub-agents hang under
-    their parent with tree lines. While an agent works, an animated dancer (one of eight:
-    Godzilla, a cat, a maiko, a teddy bear, a samurai, a salaryman, a kabuki actor, a red panda;
+    their parent with tree lines. While an agent works, an animated dancer (one of nine:
+    Godzilla, a cat, a maiko, a teddy bear, a samurai, a salaryman, a kabuki actor, a red panda,
+    a daruma;
     `yozakura-agents/dancers/*.gif`) plays in its card's top right, 4 px from the top and 8 from
     the right, 40 px high at its own width (34 to 40 px). Each agent keeps its own,
     picked by its number (`seq`), so agents started one after another get different ones.
@@ -182,8 +183,9 @@ Claude figures: `claude.*` labels on each Claude Code terminal, written by
 `extras/claude-statusline.sh` (Claude Code's `statusLine` command; needs `jq` and `hc`);
 `claude.email` comes from the account's `.claude.json` and tells accounts apart.
 Art: `backgrounds/{tsukiyo,yugure,harugasumi}.png` (drawn by `extras/yozakura-background.py`,
-which writes the SVG, one sky per theme), the eight dancer GIFs (9 frames at 160 ms, looping, transparent; each cropped
-to its figure over all its frames by `extras/cropgif.swift`, 315 to 385 px wide), the screen icons,
+which writes the SVG, one sky per theme), the nine dancer GIFs (9 frames at 160 ms, looping, transparent; each cropped
+to its figure over all its frames by `extras/cropgif.swift`, 315 to 408 px wide; the daruma, wider
+than tall, cropped square so it stays in the 40 px box), the screen icons,
 the shoji's textures (`mods/yozakura-chrome/shoji/`, drawn by `extras/shoji-textures.py`: papers
 with faint mottling and fibers, woods with their grain along them, seamless end to end).
 
