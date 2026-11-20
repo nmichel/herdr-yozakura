@@ -3,11 +3,26 @@
 // Workspace spaces: stable colored avatars, worktrees under their checkout,
 // grouped by machine when more than one is known. After a space's name, the repo
 // its first terminal is in now, only where unusual: branch, ahead/behind. Agent state lives in the agents list, not here. Click to
-// switch, right-click for its menu, drag to reorder.
+// switch, right-click for its menu, drag to reorder. A desktop or a panel dragged onto a space
+// moves into it (move.js).
 
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { spaces, machines, panes, agents, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout, home } from "herdr";
+import { spaces, machines, panes, agents, run, openOverlay, exec, hc, theme, shared, setShared, watchFolder, window, layout, home, nextCommand } from "herdr";
+import { moveToSpace } from "./move.js";
+
+// A desktop or a panel being dragged (yozakura-tabs, yozakura-agents) is the shared
+// "yozakura.dock.drag": { terminal, tab, desktop }. A space takes it when it lives on the same
+// machine; a whole desktop, only into another space.
+const sourceSpace = (drag) => spaces().find((s) => s.tabs.some((tab) => tab.id === drag.tab)) ?? null;
+function accepts(drag, w) {
+  if (!drag || (!drag.terminal && !drag.desktop)) return false;
+  const from = sourceSpace(drag);
+  if (!from || (from.machine ?? null) !== (w.machine ?? null)) return false;
+  return !(drag.desktop && from.id === w.id);
+}
+// How long the pointer rests on a space, with something dragged, before the space is shown.
+const SPRING_MS = 600;
 
 // The wood of a shoji rail, `h` px tall (see yozakura-chrome): its texture's strips side by
 // side, as wide as any card, and a line under it.
@@ -110,6 +125,19 @@ export default class Spaces extends View {
     this.born = {};
     this.pressed = null;
     this.over = null;
+    this.dropOver = null; // the space under a drag
+    this.spring = null; // the timer that shows it
+    // A drop on the desktops bar of the space shown (yozakura-tabs) is handed over here, as
+    // the shared "yozakura.desk.drop" { drag, space }.
+    cx.spawn(async (cx) => {
+      for (;;) {
+        const command = await nextCommand();
+        const request = shared("yozakura.desk.drop");
+        if (command !== "drop" || !request) continue;
+        setShared("yozakura.desk.drop", null);
+        cx.spawn(async (cx) => moveToSpace(cx, request.drag, request.space));
+      }
+    });
     this.machines = [];
     this.reconnecting = JSON.parse(localStorage.getItem("machines.reconnecting") ?? "{}");
     for (const state of Object.values(this.reconnecting)) state.busy = false;
@@ -414,6 +442,46 @@ export default class Spaces extends View {
       .when(g.behind > 0, (el) => el.child(div().flex_none().child(`\u2193${g.behind}`)));
   }
 
+  // A drag over a space it accepts outlines it; resting there SPRING_MS shows the space, to drop
+  // beside one of its panels (yozakura-pane's zones) or on its desktops bar instead.
+  hoverDrop(w, hovered, cx) {
+    const takes = hovered && accepts(shared("yozakura.dock.drag"), w);
+    if (takes && this.dropOver !== w.id) {
+      this.dropOver = w.id;
+      this.spring?.cancel();
+      this.spring = w.active ? null : cx.timer.after(SPRING_MS, () => {
+        if (this.dropOver === w.id && shared("yozakura.dock.drag")) run("space.select", { id: w.id });
+      });
+      cx.notify();
+    } else if (!takes && this.dropOver === w.id) {
+      this.endDrop();
+      cx.notify();
+    }
+  }
+
+  endDrop() {
+    this.dropOver = null;
+    this.spring?.cancel();
+    this.spring = null;
+  }
+
+  // Letting go on a space moves what was dragged into it, as a desktop of its own.
+  drop(w, cx) {
+    const drag = shared("yozakura.dock.drag");
+    if (!accepts(drag, w)) return false;
+    setShared("yozakura.dock.drag", null);
+    this.endDrop();
+    cx.spawn(async (cx) => moveToSpace(cx, drag, w.id));
+    cx.notify();
+    return true;
+  }
+
+  dropOutline(w, t, radius) {
+    const drag = shared("yozakura.dock.drag");
+    if (this.dropOver !== w.id || !accepts(drag, w)) return null;
+    return div().absolute().top(0).bottom(0).left(0).right(0).rounded(corner(radius)).border(2).border_color(t.accent);
+  }
+
   row({ w, i, g, tree }, t) {
     const on = w.active;
     const fromIndex = this.pressed === null ? -1 : spaces().findIndex(s => s.id === this.pressed);
@@ -421,6 +489,7 @@ export default class Spaces extends View {
     const color = colors[w.id] ?? "ansi6";
     const fill = color.startsWith("#") ? color : (MARK[color] ?? t[color]);
     const tail = g ? this.gitTail(g, tree, w.name, t) : null;
+    const outline = this.dropOutline(w, t, 8);
     return v_flex()
       .relative()
       .id(`space-${w.id}`)
@@ -438,6 +507,8 @@ export default class Spaces extends View {
           .when(fromIndex < i, line => line.bottom(0))
           .when(fromIndex > i, line => line.top(0)),
       ))
+      .when(Boolean(outline), (el) => el.child(outline))
+      .on_hover((hovered, cx) => this.hoverDrop(w, hovered, cx))
       .on_mouse_down("left", () => {
         this.pressed = w.id;
         this.over = w.id;
@@ -455,6 +526,7 @@ export default class Spaces extends View {
         const over = this.over;
         this.pressed = null;
         this.over = null;
+        if (this.drop(w, cx)) return;
         if (from !== null && over === w.id && from !== w.id) {
           const index = spaces().findIndex(s => s.id === w.id);
           if (index !== -1) run("space.move", { id: from, index: index + 1 });
@@ -481,7 +553,9 @@ export default class Spaces extends View {
     const colors = shared("space.colors") ?? {};
     const color = colors[w.id] ?? "ansi6";
     const fill = color.startsWith("#") ? color : (MARK[color] ?? t[color]);
+    const outline = this.dropOutline(w, t, 6);
     return h_flex()
+      .relative()
       .id(`space-${w.id}`)
       .size(28)
       .flex_none()
@@ -491,6 +565,9 @@ export default class Spaces extends View {
       .rounded(corner(6))
       .when(w.active, (el) => el.bg(t.selected))
       .when(!w.active, (el) => el.hover((s) => s.bg(t.hover)))
+      .when(Boolean(outline), (el) => el.child(outline))
+      .on_hover((hovered, cx) => this.hoverDrop(w, hovered, cx))
+      .on_mouse_up("left", (_e, cx) => this.drop(w, cx))
       .on_click(() => run("space.select", { id: w.id }))
       .on_mouse_down("right", () => this.menu(w))
       .child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#fbf7f0").child([...w.name][0]?.toUpperCase() ?? "?"));
@@ -499,6 +576,7 @@ export default class Spaces extends View {
   render() {
     const t = theme();
     const collapsed = narrow();
+    if (this.dropOver && !shared("yozakura.dock.drag")) this.endDrop(); // the drag ended elsewhere
     const palette = ["ansi6", "ansi3", "ansi4", "ansi5", "ansi2", "ansi1"];
     const sp = spaces();
     const ids = new Set(sp.map(p => p.id));

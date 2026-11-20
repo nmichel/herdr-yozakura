@@ -105,15 +105,16 @@ against the cards.
 - Desktops: a click on another desktop shows it (`tab.select`). A click on the shown one opens a
   name field under its thumbnail, focused with the name selected: Enter or leaving the field
   renames (empty: back to its default, the first panel's title), Esc or another click closes.
-  Double-click opens Herdr's rename dialog. Drag a desktop onto another to reorder; drag a
-  one-panel desktop onto a pane header to dock it. The wheel over the bar goes to the next or
-  previous desktop.
+  Double-click opens Herdr's rename dialog. Drag a desktop onto another to reorder, or onto a
+  space to move it there. A one-panel desktop is that panel: it also docks onto a pane header;
+  a desktop of several panels never docks into a pane. The wheel over the bar goes to the next
+  or previous desktop.
 - Panels row: click focuses that panel; drag it onto another panel's pill to swap them; drag it
   onto a pane header to dock it elsewhere; × closes it.
-- Docking: while a desktop, a panel or an agent card is dragged, every other pane header turns
-  into four zones (← Left, ↑ Top, ↓ Bottom, Right →); letting go on one (or clicking it) puts
-  the terminal there. The undock button sends a docked panel back to a desktop of its own; the
-  focus stays where it was.
+- Docking: while a panel (its pill, or a one-panel desktop) or an agent card is dragged, every
+  other pane header turns into four zones (← Left, ↑ Top, ↓ Bottom, Right →); letting go on one
+  (or clicking it) puts the terminal there. The undock button sends a docked panel back to a
+  desktop of its own; the focus stays where it was.
 - A terminal that loses its pane anyway (no tab, no keep, no parent) comes back in a desktop of
   its own after 10 s, with a toast that goes to it.
 - Agents: click a card to show the agent; drag it to dock it; the pin (on hover) keeps it on
@@ -123,6 +124,14 @@ against the cards.
   again only when its card moves to another section, so scrolling away from it stays.
 - Spaces: click to switch, right-click for the menu, drag to reorder, + for a new space (in the
   home folder).
+- Moving to a space: drag a desktop (all its panels), a panel or an agent card onto a space (its
+  row, or its tile on the rail; same machine only, and a desktop not onto its own space): the
+  space is outlined, and letting go moves it there as a desktop of its own, named as before.
+  Resting 600 ms on a space shows it mid-drag, to let go beside one of its panels (the docking
+  zones) or on its desktops bar instead. Herdr can't move a tab between spaces: each terminal
+  leaves its pane and comes back in the target (`yozakura-spaces/move.js`), with the desktop's
+  splits rebuilt from the core's record of the tabs (`docs.json`), each split half and half;
+  panels that aren't terminals stay behind. A space left without desktops closes.
 - The side panel shown is remembered per space. The sidebar folds into a rail below 100 px
   (44 px; 96 px on macOS). The brand card's toggle folds it; on the rail the same button turns
   into a chevron that unfolds it, right of the traffic lights (centered in full screen, where
@@ -176,7 +185,8 @@ Mods (each `place: "none"`):
 
 Shipped mods used: `menu`, `picker`,
 `machine-add`, and `frame/welcome/herdr.png`.
-Shared keys: `yozakura.opacity`, `yozakura.mainOpacity`, `yozakura.dock.drag`,
+Shared keys: `yozakura.opacity`, `yozakura.mainOpacity`, `yozakura.dock.drag` ({ terminal, tab,
+desktop }), `yozakura.desk.drop` (a drop on the desktops bar handed to yozakura-spaces),
 `yozakura.dock.undock`, `yozakura.agents.sort`, `yozakura.background` (address → count of
 background commands), `yozakura.shoji` (this layout's); `sidebar.width`, `sidebar.collapsed`, `space.colors`,
 `workspace.panels`, `new-menu.agents` (shared with the shipped mods on purpose).

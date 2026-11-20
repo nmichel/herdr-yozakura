@@ -80,19 +80,29 @@ const ROW = 38, STRIP = 30, STRIP_GAP = 6;
 export default class Tabs extends View {
   init(_props, cx) {
     if (props()?.desktop) return this.initList(cx);
-    this.pressed = null; // the desktop thumbnail pressed (its index), to reorder on release
+    this.pressed = null; // the desktop thumbnail pressed (its tab id), to reorder on release
     this.pressedPane = null; // the panel thumbnail pressed (its pane), to swap on release
     this.press = null; // { key, x, y, started }: a press on a thumbnail that may become a dock drag
     this.asked = null; // the bar height last asked for (layout.resize), until the layout has it
     this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
   }
 
-  // A press on a thumbnail that moves 6px, or leaves it, drags its terminal to dock it
-  // beside another pane (yozakura-pane draws the zones): only a lone panel's desktop, as a
-  // desktop of several can't dock into another. Letting go on another thumbnail still reorders.
-  startDock(terminal, tab) {
+  // A press on a thumbnail that moves 6px, or leaves it, drags it: a panel's terminal docks
+  // beside another pane (yozakura-pane draws the zones); a whole desktop (`desktop`) goes to a
+  // space in the sidebar (yozakura-spaces); a one-panel desktop is that panel, so it docks too.
+  // Letting go on another thumbnail of the same space still reorders.
+  startDock(terminal, tab, desktop = false) {
     this.press.started = true;
-    if (terminal) setShared("yozakura.dock.drag", { terminal, tab });
+    if (terminal || desktop) setShared("yozakura.dock.drag", { terminal, tab, desktop });
+  }
+
+  // A desktop or panel brought from another space (shown by resting on it in the sidebar) and
+  // let go on this bar: yozakura-spaces moves it into the space shown.
+  dropHere(drag, space) {
+    if (!drag || !space || space.tabs.some((tab) => tab.id === drag.tab)) return false;
+    setShared("yozakura.desk.drop", { drag, space: space.id });
+    run("yozakura-spaces.drop");
+    return true;
   }
 
   // The press is over; true when it was dragging a terminal.
@@ -232,22 +242,26 @@ export default class Tabs extends View {
         .when(true, el => plaque(el, on, 14)) // as tall and round as the Herdr card
         .text_color(on ? t.accent : t.muted)
         .hover(s => s.bg(t.hover))
-        .when(Boolean(terminal) && drag?.terminal === terminal, el => el.opacity(0.5)) // being dragged
+        .when(drag?.tab === c.id && (drag.desktop || drag.terminal === terminal), el => el.opacity(0.5)) // being dragged
         .on_mouse_down("left", (e, cx) => {
-          cx.stop_propagation(); this.pressed = i;
+          cx.stop_propagation(); this.pressed = c.id;
           this.press = { key: c.id, x: e.position.x, y: e.position.y, started: false };
           if (e.click_count === 2) run("tab.rename", { id: c.id });
         })
         .on_mouse_move(e => {
           const s = this.press;
-          if (s?.key === c.id && !s.started && Math.hypot(e.position.x - s.x, e.position.y - s.y) > 6) this.startDock(terminal, c.id);
+          if (s?.key === c.id && !s.started && Math.hypot(e.position.x - s.x, e.position.y - s.y) > 6) this.startDock(terminal, c.id, true);
         })
-        .on_hover(over => { if (!over && this.press?.key === c.id && !this.press.started) this.startDock(terminal, c.id); })
+        .on_hover(over => { if (!over && this.press?.key === c.id && !this.press.started) this.startDock(terminal, c.id, true); })
         .on_mouse_up("left", (e) => {
           const from = this.pressed; this.pressed = null;
+          const drag = shared("yozakura.dock.drag");
           const docking = this.endDock();
-          if (from !== null && from !== i) run("tab.move", { id: shown[from].id, index: space.tabs.findIndex(x => x.id === c.id) + 1 });
-          else if (!docking || from === i) { // not a drag from elsewhere ending here
+          // The pressed desktop may belong to another space: resting on a space shows it mid-drag.
+          const reorder = from !== null && from !== c.id && shown.some(x => x.id === from);
+          if (reorder) run("tab.move", { id: from, index: space.tabs.findIndex(x => x.id === c.id) + 1 });
+          else if (docking && this.dropHere(drag, space)) return;
+          else if (!docking || from === c.id) { // not a drag from elsewhere ending here
             if (!on) run("tab.select", { id: c.id });
             else if (e.click_count < 2) this.openList(c, e.bounds);
           }
@@ -341,7 +355,11 @@ export default class Tabs extends View {
           .child(button("maximize", w.platform === "windows" ? svg(`mods/yozakura-tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
           .child(button("close-window", w.platform === "windows" ? svg("mods/yozakura-tabs/win-close.svg").size(16) : svg("mods/yozakura-pane/close.svg").size(13), () => run("window.close")))));
     return v_flex().size_full().min_w(0).gap(STRIP_GAP) // no fill: the canvas shows through
-      .on_mouse_up("left", () => { this.pressed = null; this.pressedPane = null; this.endDock(); })
+      .on_mouse_up("left", () => {
+        this.pressed = null; this.pressedPane = null;
+        const drag = shared("yozakura.dock.drag");
+        if (this.endDock()) this.dropHere(drag, space);
+      })
       .child(desktops)
       .when(strip, el => el.child(h_flex().id("pane-strip").h(STRIP).flex_none().w_full().min_w(0).gap(3).items_center()
         .overflow_x_scrollbar().children(activePanes.map(panelThumb))));
