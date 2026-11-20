@@ -121,14 +121,17 @@ function find(node, id) {
 
 // The sidebar's rail goes by its width, not a flag: dragging its edge narrows it too.
 const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 100;
+// The macOS rail holds the traffic lights (they reach 12 + 64 px) and the unfold chevron after
+// them, and stays under the 100 px where the sidebar unfolds.
+const MACOS_RAIL = 96;
 
-// To the rail (on macOS wide enough for the traffic lights), or back to the width it had.
+// To the rail, or back to the width it had.
 function toggleSidebar() {
   const width = find(layout(), "sidebar")?.size?.px;
   if (!narrow()) setShared("sidebar.width", width);
   // Mods edited before the rail went by width still read the flag.
   setShared("sidebar.collapsed", !narrow());
-  run("layout.resize", { id: "sidebar", px: narrow() ? (shared("sidebar.width") ?? 268) : window()?.platform === "macos" ? 76 : 44 });
+  run("layout.resize", { id: "sidebar", px: narrow() ? (shared("sidebar.width") ?? 268) : window()?.platform === "macos" ? MACOS_RAIL : 44 });
 }
 
 export default class WorkspaceChrome extends View {
@@ -175,12 +178,16 @@ export default class WorkspaceChrome extends View {
         .child(row("machine", "plus", "Add machine", true, () => run("mod.open", { name: "machine-add" })));
     }
     // The brand card: with shoji, a rail of wood from end to end.
+    const lights = window()?.platform === "macos" && !window()?.fullscreen;
+    // On the macOS rail the traffic lights take the card's left: the chevron goes to its right end.
+    const besideLights = collapsed && lights;
+    const toggleIcon = collapsed ? "chevron-right" : "sidebar";
     return h_flex().size_full().overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).when(Boolean(kit), el => el.relative().rounded(1).children(rail(kit, 30, false)))
-      .when(collapsed, el => el.justify_center()).when(!collapsed, el => el.pl(14).pr(10)).gap(4).items_center().text_size(13.5)
-      .when(window()?.platform === "macos" && !window()?.fullscreen && !collapsed, el => el.pl(76))
+      .when(collapsed && !besideLights, el => el.justify_center()).when(besideLights, el => el.justify_end().pr(4))
+      .when(!collapsed, el => el.pl(14).pr(10)).gap(4).items_center().text_size(13.5)
+      .when(lights && !collapsed, el => el.pl(76))
       .when(!collapsed, el => el.child(h_flex().flex_1().min_w(0).gap(8).items_center().child(image("frame/welcome/herdr.png").size(20).flex_none().rounded(5)).child(div().min_w(0).truncate().font_semibold().text_color(kit ? kit.ink : t.foreground).child("Herdr"))))
       .when(!collapsed, el => el.child(this.button("search", svg("mods/yozakura-chrome/search.svg").size(15), () => run("mod.open", { name: "picker" }))))
-      // On the macOS rail the traffic lights fill the row; the agents list's » unfolds it.
-      .when(!(collapsed && window()?.platform === "macos"), el => el.child(this.button("sidebar-toggle", svg("mods/yozakura-chrome/sidebar.svg").size(15), toggleSidebar)));
+      .child(this.button("sidebar-toggle", svg(`mods/yozakura-chrome/${toggleIcon}.svg`).size(15), toggleSidebar));
   }
 }

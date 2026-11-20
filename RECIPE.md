@@ -122,7 +122,9 @@ against the cards.
 - Spaces: click to switch, right-click for the menu, drag to reorder, + for a new space (in the
   home folder).
 - The side panel shown is remembered per space. The sidebar folds into a rail below 100 px
-  (toggle in the brand card; » in the agents rail unfolds it).
+  (44 px; 96 px on macOS). The brand card's toggle folds it; on the rail the same button turns
+  into a chevron that unfolds it, right of the traffic lights (centered in full screen, where
+  macOS draws none).
 
 ## Built from
 
