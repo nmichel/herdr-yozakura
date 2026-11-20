@@ -375,6 +375,7 @@ export default class Spaces extends View {
   // The rows, under a header per machine once one isn't this computer.
   grouped(t, collapsed) {
     const rows = this.ordered();
+    const dragging = Boolean(shared("yozakura.dock.drag"));
     const draw = (r) => (collapsed ? this.compact(r, t) : this.row(r, t));
     const remote = [...new Set([...rows.map(r => r.w.machine).filter(Boolean), ...this.machines.map(m => m.name), ...Object.keys(this.reconnecting)])].sort();
     const loading = m => {
@@ -393,7 +394,7 @@ export default class Spaces extends View {
       const rebuilt = this.rebuilt(machine) || !!repair;
       const folded = this.folded.has(m);
       const head = h_flex().id(`machine-${m ?? "local"}`).h(26).flex_none().px(collapsed ? 2 : 8).gap(7).items_center().text_size(11).text_color(t.dim)
-        .cursor_pointer().hover(s => s.bg(t.hover))
+        .when(!dragging, el => el.cursor_pointer()).hover(s => s.bg(t.hover))
         .on_click((_e, cx) => {
           folded ? this.folded.delete(m) : this.folded.add(m);
           localStorage.setItem("machines.folded", JSON.stringify([...this.folded]));
@@ -490,6 +491,7 @@ export default class Spaces extends View {
     const fill = color.startsWith("#") ? color : (MARK[color] ?? t[color]);
     const tail = g ? this.gitTail(g, tree, w.name, t) : null;
     const outline = this.dropOutline(w, t, 8);
+    const drag = shared("yozakura.dock.drag");
     return v_flex()
       .relative()
       .id(`space-${w.id}`)
@@ -508,6 +510,8 @@ export default class Spaces extends View {
           .when(fromIndex > i, line => line.top(0)),
       ))
       .when(Boolean(outline), (el) => el.child(outline))
+      // Something dragged over it: the pointer says whether it can be dropped here.
+      .when(Boolean(drag), (el) => (accepts(drag, w) ? el.cursor_copy() : el.cursor_not_allowed()))
       .on_hover((hovered, cx) => this.hoverDrop(w, hovered, cx))
       .on_mouse_down("left", () => {
         this.pressed = w.id;
@@ -554,6 +558,7 @@ export default class Spaces extends View {
     const color = colors[w.id] ?? "ansi6";
     const fill = color.startsWith("#") ? color : (MARK[color] ?? t[color]);
     const outline = this.dropOutline(w, t, 6);
+    const drag = shared("yozakura.dock.drag");
     return h_flex()
       .relative()
       .id(`space-${w.id}`)
@@ -566,6 +571,7 @@ export default class Spaces extends View {
       .when(w.active, (el) => el.bg(t.selected))
       .when(!w.active, (el) => el.hover((s) => s.bg(t.hover)))
       .when(Boolean(outline), (el) => el.child(outline))
+      .when(Boolean(drag), (el) => (accepts(drag, w) ? el.cursor_copy() : el.cursor_not_allowed()))
       .on_hover((hovered, cx) => this.hoverDrop(w, hovered, cx))
       .on_mouse_up("left", (_e, cx) => this.drop(w, cx))
       .on_click(() => run("space.select", { id: w.id }))
@@ -595,6 +601,14 @@ export default class Spaces extends View {
     // paper and frame, and the header is a rail of wood.
     const kit = shared("yozakura.shoji");
     return v_flex().size_full().min_h(0).overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).text_size(13) // rounded so the card corners stay clean
+      .when(Boolean(shared("yozakura.dock.drag")), el => el.cursor_not_allowed()) // something dragged, over no space: no drop
+      // Let go here but on no space that takes it (a space's own release comes first): cancelled.
+      .on_mouse_up("left", (_e, cx) => {
+        if (!shared("yozakura.dock.drag")) return;
+        setShared("yozakura.dock.drag", null);
+        this.endDrop();
+        cx.notify();
+      })
       .when(collapsed && !kit, el => el.pt(10))
       .child(h_flex().h(31).flex_none().when(collapsed, el => el.justify_center()).when(!collapsed, el => el.pl(16).pr(10).justify_between()).items_center().text_size(11.5).text_color(kit ? kit.inkDim : t.dim)
         .when(Boolean(kit), el => el.relative().mb(6).children(rail(kit, 31)))

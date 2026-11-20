@@ -8,7 +8,22 @@
 
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex, v_flex, InputState, Input } from "gpui-base";
-import { spaces, panes, agents, run, openOverlay, closeOverlay, props, theme, window, shared, setShared, layout, settings } from "herdr";
+import { spaces, panes, agents, run, openOverlay, closeOverlay, props, theme, window, shared, setShared, layout, settings, exec } from "herdr";
+
+// Whether the system says the left button is up (macOS: NSEvent's pressed buttons, via
+// osascript, ~80 ms). Null where it can't tell (another system, a failed call).
+async function leftButtonUp() {
+  if (window()?.platform !== "macos") return null;
+  try {
+    const answer = await exec("osascript", ["-l", "JavaScript", "-e", 'ObjC.import("AppKit"); $.NSEvent.pressedMouseButtons']);
+    const buttons = Number(answer.stdout.trim());
+    return Number.isInteger(buttons) ? (buttons & 1) === 0 : null;
+  } catch {
+    return null;
+  }
+}
+// How long a release leaves a drop target to take the drop before the drag is cancelled.
+const DROP_GRACE_MS = 200;
 
 // The cards' fill at the opacity in yozakura-chrome/settings.json (1 when unset).
 const islandFill = (c) => {
@@ -85,6 +100,19 @@ export default class Tabs extends View {
     this.press = null; // { key, x, y, started }: a press on a thumbnail that may become a dock drag
     this.asked = null; // the bar height last asked for (layout.resize), until the layout has it
     this.panels = JSON.parse(localStorage.getItem("panels") ?? "{}");
+    // A drag ends with the button's release: dropped where a target takes it, else cancelled.
+    // Over a terminal (drawn by the app) no mod hears that release, so while something is
+    // dragged the system is asked whether the button is still down; once it isn't and no target
+    // took the drop in its grace, the drag is cancelled. Nothing stays pending.
+    cx.spawn(async (cx) => {
+      for (;;) {
+        await cx.sleep(150);
+        const pending = JSON.stringify(shared("yozakura.dock.drag") ?? null);
+        if (pending === "null" || !(await leftButtonUp())) continue;
+        await cx.sleep(DROP_GRACE_MS);
+        if (JSON.stringify(shared("yozakura.dock.drag") ?? null) === pending) setShared("yozakura.dock.drag", null);
+      }
+    });
   }
 
   // A press on a thumbnail that moves 6px, or leaves it, drags it: a panel's terminal docks
@@ -216,6 +244,9 @@ export default class Tabs extends View {
     const shown = space?.tabs ?? [];
     const stop = (_e, cx) => cx.stop_propagation();
     const drag = shared("yozakura.dock.drag");
+    // Something dragged from another space (shown by resting on it): letting go anywhere on
+    // this bar makes it a desktop here (see dropHere).
+    const barTakes = Boolean(drag) && !shown.some((x) => x.id === drag.tab);
     const tabPanes = new Map();
     for (const p of panes()) tabPanes.set(p.tab, [...(tabPanes.get(p.tab) ?? []), p]);
     const titles = new Map(agents().map(a => [a.pane, a.title]));
@@ -242,7 +273,10 @@ export default class Tabs extends View {
         .when(true, el => plaque(el, on, 14)) // as tall and round as the Herdr card
         .text_color(on ? t.accent : t.muted)
         .hover(s => s.bg(t.hover))
-        .when(drag?.tab === c.id && (drag.desktop || drag.terminal === terminal), el => el.opacity(0.5)) // being dragged
+        .when(drag?.tab === c.id && (drag.desktop || drag.terminal === terminal), el => el.opacity(0.5).cursor_grabbing()) // being dragged: the only closed hand
+        // From another space: a desktop here (+). Another desktop of this space: they change
+        // places (↔). A panel or a card has nothing to do here.
+        .when(Boolean(drag) && drag.tab !== c.id, el => (barTakes ? el.cursor_copy() : drag.desktop ? el.cursor_ew_resize() : el.cursor_not_allowed()))
         .on_mouse_down("left", (e, cx) => {
           cx.stop_propagation(); this.pressed = c.id;
           this.press = { key: c.id, x: e.position.x, y: e.position.y, started: false };
@@ -284,6 +318,7 @@ export default class Tabs extends View {
     const active = shown.find(c => c.active);
     const activePanes = active ? tabPanes.get(active.id) ?? [] : [];
     const strip = activePanes.length > 1;
+    const swapping = Boolean(drag) && activePanes.some(q => q.pane === this.pressedPane);
     const panelThumb = (p) => {
       const on = p.focused;
       const name = panelName(p, titles);
@@ -292,7 +327,9 @@ export default class Tabs extends View {
         .when(true, el => plaque(el, on, STRIP / 2))
         .text_color(on ? t.accent : t.muted)
         .hover(s => s.bg(t.hover))
-        .when(Boolean(p.terminal) && drag?.terminal === p.terminal, el => el.opacity(0.5)) // being dragged
+        .when(Boolean(p.terminal) && drag?.terminal === p.terminal, el => el.opacity(0.5).cursor_grabbing()) // being dragged: the only closed hand
+        // A panel of this desktop dragged here swaps places (↔); anything else from this space can't.
+        .when(Boolean(drag) && drag.terminal !== p.terminal, el => (barTakes ? el.cursor_copy() : swapping ? el.cursor_ew_resize() : el.cursor_not_allowed()))
         .on_mouse_down("left", (e, cx) => {
           cx.stop_propagation(); this.pressedPane = p.pane;
           this.press = { key: p.pane, x: e.position.x, y: e.position.y, started: false };
@@ -355,6 +392,11 @@ export default class Tabs extends View {
           .child(button("maximize", w.platform === "windows" ? svg(`mods/yozakura-tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
           .child(button("close-window", w.platform === "windows" ? svg("mods/yozakura-tabs/win-close.svg").size(16) : svg("mods/yozakura-pane/close.svg").size(13), () => run("window.close")))));
     return v_flex().size_full().min_w(0).gap(STRIP_GAP) // no fill: the canvas shows through
+      .when(Boolean(drag), el => (barTakes ? el.cursor_copy() : el.cursor_not_allowed()))
+      // Where the system can't say the button is up (see init), a drag let go over a terminal
+      // stays pending: the next press anywhere ends it. A docking zone pressed then still docks
+      // (it keeps the drag it was drawn with).
+      .on_mouse_down_out(() => { if (shared("yozakura.dock.drag")) setShared("yozakura.dock.drag", null); })
       .on_mouse_up("left", () => {
         this.pressed = null; this.pressedPane = null;
         const drag = shared("yozakura.dock.drag");

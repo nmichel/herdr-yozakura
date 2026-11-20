@@ -5,7 +5,8 @@
 // Shows the program's icon (the app's program table), the agent's name or
 // the terminal's title, the folder, and the agent's status; buttons split, zoom and close
 // this pane. Props from the app: { pane, terminal }. Click: focus the pane.
-// While a tab or an agent card is dragged, it shows drop zones instead (see dock()).
+// While a panel, an agent card or a one-panel desktop is dragged, it shows drop zones instead
+// (see dock()).
 
 import { View, div, svg, image } from "gpui-kit";
 import { h_flex } from "gpui-base";
@@ -65,8 +66,9 @@ function folder(cwd) {
 
 // Docking. A tab (yozakura-tabs) or an agent card (yozakura-agents) being dragged sets the
 // shared "yozakura.dock.drag" to { terminal, tab }. Meanwhile every other pane's header turns into
-// four zones; letting go on one docks that terminal on that side of the pane. A release
-// elsewhere leaves the zones up (a click on one still docks); any other press clears them.
+// four zones; letting go on one docks that terminal on that side of the pane. Letting go
+// anywhere else cancels the drag: on what the mods draw, they hear it; over a terminal itself
+// (drawn by the app), yozakura-tabs learns from the system that the button is up.
 const SIDES = [
   { id: "left", text: "← Left" },
   { id: "top", text: "↑ Top" },
@@ -213,6 +215,7 @@ export default class Pane extends View {
       .rounded_t(shared("yozakura.shoji") ? 1 : 13).bg(mainFill(t.background))
       .border_b(1)
       .border_color(t.accent)
+      .cursor_not_allowed() // between the zones
       .on_mouse_up("left", () => setShared("yozakura.dock.drag", null))
       .on_mouse_down_out(() => { if (shared("yozakura.dock.drag")) setShared("yozakura.dock.drag", null); })
       .children(SIDES.map((s) => h_flex()
@@ -227,6 +230,7 @@ export default class Pane extends View {
         .text_size(11.5)
         .text_color(t.accent)
         .hover((el) => el.bg(t.accent + "4d").text_color(t.foreground))
+        .cursor_copy() // a drop target
         // Pressed on: the zones stayed up after a release elsewhere.
         .on_mouse_down("left", (_e, cx) => { cx.stop_propagation(); drop(s.id, cx); })
         // Let go on: the drag ends here (unless that press already docked).
@@ -240,6 +244,8 @@ export default class Pane extends View {
     const p = all.find((q) => q.pane === props()?.pane);
     if (!p) return div();
     const drag = shared("yozakura.dock.drag");
+    // A panel, an agent card or a one-panel desktop (that panel) docks; a desktop of several
+    // panels goes to a space, never into a pane (drag.terminal is null for it).
     if (drag?.terminal && drag.terminal !== p.terminal) return this.zones(t, p.pane, drag);
     const name = ((p.program?.agent || p.program?.shell) && p.program.name) || p.title || p.program?.name || "shell";
     const kit = shared("yozakura.shoji");
@@ -260,6 +266,9 @@ export default class Pane extends View {
       .px(10)
       .gap(8)
       .items_center()
+      // Dragged without zones here (a desktop of several panels, or this pane's own terminal):
+      // no drop, and letting go here cancels the drag.
+      .when(Boolean(drag), (el) => el.cursor_not_allowed().on_mouse_up("left", () => setShared("yozakura.dock.drag", null)))
       .when(!kit, (el) => el
         .rounded_t(13).bg(mainFill(on ? mix(t.background, t.accent, 0.32) : t.background)) // sits inside a 14px card
         .border_b(1)

@@ -113,8 +113,13 @@ against the cards.
   onto a pane header to dock it elsewhere; × closes it.
 - Docking: while a panel (its pill, or a one-panel desktop) or an agent card is dragged, every
   other pane header turns into four zones (← Left, ↑ Top, ↓ Bottom, Right →); letting go on one
-  (or clicking it) puts the terminal there. The undock button sends a docked panel back to a
-  desktop of its own; the focus stays where it was.
+  puts the terminal there. A release has two outcomes only: dropped where a target takes it,
+  else cancelled. The mods hear a release on what they draw; over a terminal itself, drawn by
+  the app, none does, so while something is dragged yozakura-tabs asks the system whether the
+  left button is still down (macOS: `NSEvent.pressedMouseButtons` through `osascript`, every
+  150 ms) and, once it's up and no target took the drop within 200 ms, cancels the drag.
+  Elsewhere than macOS, such a drag stays pending until the next press anywhere. The undock
+  button sends a docked panel back to a desktop of its own; the focus stays where it was.
 - A terminal that loses its pane anyway (no tab, no keep, no parent) comes back in a desktop of
   its own after 10 s, with a toast that goes to it.
 - Agents: click a card to show the agent; drag it to dock it; the pin (on hover) keeps it on
@@ -132,6 +137,13 @@ against the cards.
   leaves its pane and comes back in the target (`yozakura-spaces/move.js`), with the desktop's
   splits rebuilt from the core's record of the tabs (`docs.json`), each split half and half;
   panels that aren't terminals stay behind. A space left without desktops closes.
+- The pointer while dragging says what letting go would do: the drop pointer (`cursor_copy`)
+  where it takes the drop (a space, a docking zone, the desktops bar of another space); the
+  left-right arrows (`cursor_ew_resize`, the nearest to a swap) over a desktop or a panel pill
+  it changes places with; the not-allowed sign everywhere else the mods draw, where letting go
+  cancels. A closed hand only on what's being dragged (its thumbnail or pill). The agents list
+  and the side panel get a veil while dragging, so their rows' own pointer doesn't show through.
+  The terminals themselves are drawn by the app: over them the pointer stays the system's.
 - The side panel shown is remembered per space. The sidebar folds into a rail below 100 px
   (44 px; 96 px on macOS). The brand card's toggle folds it; on the rail the same button turns
   into a chevron that unfolds it, right of the traffic lights (centered in full screen, where

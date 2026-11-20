@@ -2,7 +2,7 @@
 // See THIRD_PARTY_NOTICES.md in the yozakura repository.
 import { View, div, svg } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, agents, terminals, focused, panes, home, theme, shared } from "herdr";
+import { spaces, agents, terminals, focused, panes, home, theme, shared, setShared } from "herdr";
 
 // The cards' fill at the opacity in yozakura-chrome/settings.json (1 when unset).
 const islandFill = (c) => {
@@ -89,6 +89,8 @@ export default class WorkspaceStatus extends View {
     // With shoji (shared "yozakura.shoji", see yozakura-chrome) the layout gives the card its paper and frame.
     const kit = shared("yozakura.shoji");
     return h_flex().size_full().px(14).gap(16).items_center().overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).text_size(11.8).text_color(t.muted) // its own card, no divider
+      // Something dragged: no drop here, and a release here cancels it.
+      .when(Boolean(shared("yozakura.dock.drag")), el => el.cursor_not_allowed().on_mouse_up("left", () => setShared("yozakura.dock.drag", null)))
       .child(label(space?.machine ? "server" : "monitor", space?.machine ?? "This computer", t.working))
       .when(Boolean(dir), el => el.child(label("folder", dir, t.ansi4)))
       .when(Boolean(branch), el => el.child(label("branch", branch, t.accent)))

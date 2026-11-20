@@ -2,7 +2,7 @@
 // See THIRD_PARTY_NOTICES.md in the yozakura repository.
 import { View, div, image } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input, Scrollbar, v_virtual_list } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, shared } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, shared, setShared } from "herdr";
 // The shoji look (shared "yozakura.shoji", see yozakura-chrome): the layout gives the card its
 // paper and frame; the header is a rail of wood, `h` px tall (its texture's strips side by
 // side, as wide as any card, and a line under it); corners inside are nearly square.
@@ -195,7 +195,7 @@ export default class Changes extends View {
     const kit = shared("yozakura.shoji");
     // On the wood, the counts sit on a disc of paper so their colors read.
     const paper = (el) => kit ? div().px(4).rounded(3).bg(t.background).child(el) : el;
-    return v_flex().id("changes").size_full().min_h(0).overflow_hidden().when(!kit, el => el.rounded(10).bg(t.background).border_1().border_color(t.border)).text_color(t.foreground).text_size(13).track_focus(this.handle)
+    return v_flex().id("changes").relative().size_full().min_h(0).overflow_hidden().when(!kit, el => el.rounded(10).bg(t.background).border_1().border_color(t.border)).text_color(t.foreground).text_size(13).track_focus(this.handle)
       .on_key_down((e, cx) => {
         if (e.key === "escape" && this.typing) { this.typing = false; this.handle.focus(); cx.stop_propagation(); cx.notify(); }
       })
@@ -225,6 +225,10 @@ export default class Changes extends View {
       .when(Boolean(this.note), (e) => e.child(div().px(10).pb(8).text_size(11).text_color(t.ansi1).child(this.note)))
       .child(h_flex().flex_none().p(10).gap(8).border_t(1).border_color(t.border)
         .child(div().id("commit-message").flex_1().min_w(0).h(32).px(10).flex().items_center().rounded(corner(8)).border_1().border_color(this.typing ? t.accent : t.border).cursor_text().on_mouse_down("left", (_e, cx) => cx.stop_propagation()).child(Input.new(this.input).h_full().text_size(12).text_color(t.foreground)))
-        .child(div().id("commit").h(32).px(14).flex().items_center().rounded(corner(8)).bg(enabled ? t.solid : t.raised).text_color(enabled ? t.solid_foreground : t.dim).text_size(12).when(enabled, (e) => e.cursor_pointer()).on_click((_e, cx) => this.commit(cx)).child(this.busy ? "Committing…" : "Commit")));
+        .child(div().id("commit").h(32).px(14).flex().items_center().rounded(corner(8)).bg(enabled ? t.solid : t.raised).text_color(enabled ? t.solid_foreground : t.dim).text_size(12).when(enabled, (e) => e.cursor_pointer()).on_click((_e, cx) => this.commit(cx)).child(this.busy ? "Committing…" : "Commit")))
+      // Something dragged (a desktop, a panel, an agent card): no drop here. A veil keeps the
+      // no-drop pointer over the rows' own, and letting go on it cancels the drag.
+      .when(Boolean(shared("yozakura.dock.drag")), (e) => e.child(div().id("changes-drag-veil").absolute().top(0).bottom(0).left(0).right(0).cursor_not_allowed()
+        .on_mouse_up("left", () => setShared("yozakura.dock.drag", null))));
   }
 }

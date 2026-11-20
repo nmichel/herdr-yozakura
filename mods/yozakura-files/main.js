@@ -3,7 +3,7 @@
 // A lazy file browser for the focused pane's folder, with bounded read-only previews.
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, Editor, EditorState } from "gpui-base";
-import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, window, shared } from "herdr";
+import { spaces, panes, focused, exec, readTextFile, watchFolder, theme, settings, window, shared, setShared } from "herdr";
 // The shoji look (shared "yozakura.shoji", see yozakura-chrome): the layout gives the card its
 // paper and frame; the header is a rail of wood, `h` px tall (its texture's strips side by
 // side, as wide as any card, and a line under it); corners inside are nearly square.
@@ -180,7 +180,7 @@ export default class Files extends View {
     if (key() !== this.context?.key) this.refresh(cx);
     const t = theme();
     const kit = shared("yozakura.shoji");
-    return v_flex().id("files").size_full().min_h(0).overflow_hidden().when(!kit, el => el.rounded(10).bg(t.background).border_1().border_color(t.border)).text_color(t.foreground).text_size(13)
+    return v_flex().id("files").relative().size_full().min_h(0).overflow_hidden().when(!kit, el => el.rounded(10).bg(t.background).border_1().border_color(t.border)).text_color(t.foreground).text_size(13)
       .child(h_flex().h(kit ? 31 : 42).flex_none().px(14).gap(8).items_center()
         .when(!kit, el => el.border_b(1).border_color(t.border))
         .when(Boolean(kit), el => el.relative().overflow_hidden().text_color(kit.ink).children(rail(kit, 31)))
@@ -190,6 +190,10 @@ export default class Files extends View {
       .when(!this.file, el => el.child(v_flex().id("files-tree").flex_1().min_h(0).overflow_y_scrollbar().p(6).children(this.rows("", 0, [], t))
         .when(Boolean(this.error) || !this.entries.get("")?.length, el => el.child(div().p(8).text_size(12).text_color(t.dim).child(this.error || (this.loading ? "Loading files…" : this.root ? "No files" : "No folder"))))
         .when(this.limited, el => el.child(div().p(8).text_size(11).text_color(t.dim).child("File list limited to 500 entries per folder and 5,000 total")))))
-      .when(Boolean(this.file), el => el.child(this.code ? Editor.new(this.code).flex_1().min_h(0) : div().p(12).text_color(t.dim).child(this.fileError || "Loading file…")));
+      .when(Boolean(this.file), el => el.child(this.code ? Editor.new(this.code).flex_1().min_h(0) : div().p(12).text_color(t.dim).child(this.fileError || "Loading file…")))
+      // Something dragged (a desktop, a panel, an agent card): no drop here. A veil keeps the
+      // no-drop pointer over the rows' own, and letting go on it cancels the drag.
+      .when(Boolean(shared("yozakura.dock.drag")), el => el.child(div().id("files-drag-veil").absolute().top(0).bottom(0).left(0).right(0).cursor_not_allowed()
+        .on_mouse_up("left", () => setShared("yozakura.dock.drag", null))));
   }
 }

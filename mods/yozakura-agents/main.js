@@ -649,6 +649,7 @@ export default class Agents extends View {
     // paper and frame, and the header is a rail of wood.
     const kit = shared("yozakura.shoji");
     return v_flex()
+      .relative() // the drag veil's box
       .size_full()
       .min_h(0)
       .overflow_hidden()
@@ -684,6 +685,10 @@ export default class Agents extends View {
       )
       .child(v_flex().id("ag-list").flex_1().min_h(0).px(collapsed ? 0 : 8).when(collapsed, (el) => el.items_center()).overflow_y_scrollbar().mode("always").track_scroll(this.scroll)
         .on_mouse_up("left", () => this.endDock()) // a drag let go over the list ends
-        .children(rows));
+        .children(rows))
+      // Something dragged: the list takes no drop. A veil over it holds the no-drop pointer
+      // (the cards' own pointer would show through), and letting go on it ends the drag.
+      .when(Boolean(drag), (el) => el.child(div().id("ag-drag-veil").absolute().top(0).bottom(0).left(0).right(0).cursor_not_allowed()
+        .on_mouse_up("left", () => this.endDock())));
   }
 }

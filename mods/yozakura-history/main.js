@@ -5,7 +5,7 @@
 // bouton « Fetch » qui lance `git fetch --prune` quand on clique dessus.
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, settings, run, shared } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, run, shared, setShared } from "herdr";
 // The shoji look (shared "yozakura.shoji", see yozakura-chrome): the layout gives the card its
 // paper and frame; the header is a rail of wood, `h` px tall (its texture's strips side by
 // side, as wide as any card, and a line under it); corners inside are nearly square.
@@ -242,11 +242,15 @@ export default class GitHistory extends View {
     const header = kit
       ? v_flex().flex_none().child(title).when(extra.length > 0, (e) => e.child(v_flex().px(14).py(8).gap(6).border_b(1).border_color(t.border).children(extra)))
       : v_flex().flex_none().px(14).py(10).gap(6).border_b(1).border_color(t.border).child(title).children(extra);
-    return v_flex().id("git-history").size_full().min_h(0).overflow_hidden().when(!kit, (e) => e.rounded(10).bg(t.background).border_1().border_color(t.border)).text_color(t.foreground).text_size(13)
+    return v_flex().id("git-history").relative().size_full().min_h(0).overflow_hidden().when(!kit, (e) => e.rounded(10).bg(t.background).border_1().border_color(t.border)).text_color(t.foreground).text_size(13)
       .child(header)
       .child(div().flex_1().min_h(0).relative()
         .child(v_flex().id("git-history-list").absolute().inset_0().overflow_y_scroll().p(6)
           .children(rows.length ? rows : [div().p(8).text_color(t.dim).child(empty)]))
-        .child(Scrollbar.vertical("git-history-list").absolute().inset_0()));
+        .child(Scrollbar.vertical("git-history-list").absolute().inset_0()))
+      // Something dragged (a desktop, a panel, an agent card): no drop here. A veil keeps the
+      // no-drop pointer over the rows' own, and letting go on it cancels the drag.
+      .when(Boolean(shared("yozakura.dock.drag")), (e) => e.child(div().id("history-drag-veil").absolute().inset_0().cursor_not_allowed()
+        .on_mouse_up("left", () => setShared("yozakura.dock.drag", null))));
   }
 }

@@ -167,12 +167,15 @@ export default class WorkspaceChrome extends View {
     const collapsed = narrow();
     // With shoji the layout gives the cards their paper and frame: no fill of their own.
     const kit = shared("yozakura.shoji");
+    // A desktop, a panel or an agent card being dragged: these cards take no drop.
+    const dragging = Boolean(shared("yozakura.dock.drag"));
     if (props()?.footer) {
       const row = (id, icon, label, dim, action) => h_flex().id(id).h(28).px(collapsed ? 6 : 8).gap(9).items_center().rounded(8).when(collapsed, el => el.justify_center())
-        .text_color(dim ? t.dim : t.muted).hover(s => s.bg(t.hover).text_color(t.foreground)).cursor_pointer()
+        .text_color(dim ? t.dim : t.muted).hover(s => s.bg(t.hover).text_color(t.foreground)).when(!dragging, el => el.cursor_pointer())
         .on_click(action).child(svg(`mods/yozakura-chrome/${icon}.svg`).size(14))
         .when(!collapsed, el => el.child(div().min_w(0).truncate().child(label)));
       return v_flex().size_full().overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).px(collapsed ? 5 : 8).py(kit ? 5 : 8).text_size(13) // its own card, no divider
+        .when(dragging, el => el.cursor_not_allowed().on_mouse_up("left", () => setShared("yozakura.dock.drag", null))) // a release here cancels
         .child(row("settings", "settings", "Settings", false, () => run("app.settings"))
           .when(Boolean(updates().app.ready), el => el.child(div().size(6).rounded_full().bg(t.accent))))
         .child(row("machine", "plus", "Add machine", true, () => run("mod.open", { name: "machine-add" })));
@@ -185,6 +188,7 @@ export default class WorkspaceChrome extends View {
     return h_flex().size_full().overflow_hidden().when(!kit, el => el.rounded(13).bg(islandFill(t.chrome))).when(Boolean(kit), el => el.relative().rounded(1).children(rail(kit, 30, false)))
       .when(collapsed && !besideLights, el => el.justify_center()).when(besideLights, el => el.justify_end().pr(4))
       .when(!collapsed, el => el.pl(14).pr(10)).gap(4).items_center().text_size(13.5)
+      .when(dragging, el => el.cursor_not_allowed().on_mouse_up("left", () => setShared("yozakura.dock.drag", null))) // a release here cancels
       .when(lights && !collapsed, el => el.pl(76))
       .when(!collapsed, el => el.child(h_flex().flex_1().min_w(0).gap(8).items_center().child(image("frame/welcome/herdr.png").size(20).flex_none().rounded(5)).child(div().min_w(0).truncate().font_semibold().text_color(kit ? kit.ink : t.foreground).child("Herdr"))))
       .when(!collapsed, el => el.child(this.button("search", svg("mods/yozakura-chrome/search.svg").size(15), () => run("mod.open", { name: "picker" }))))
