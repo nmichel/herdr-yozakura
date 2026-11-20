@@ -95,12 +95,14 @@ const SECTION_STATUS = { 4: "blocked", 3: "done", 2: "working" };
 // A status light rather than the theme's idle grey, readable on dark and light.
 
 // While an agent works, a small dancer plays in its card's top right corner (an animated GIF:
-// GPUI plays it by itself, no timer). Each agent keeps its own, picked by its number, so
+// GPUI plays it by itself, no timer); not working but with commands still running in its
+// background (see scan), the dancer stays, dimmed. Each agent keeps its own, picked by its number, so
 // agents started one after another get different ones. Each GIF is cropped to its figure over
 // all its frames, and shown 40 px high at its own width (the crop's), so every dancer fills
 // its box whatever its shape: [name, width].
 const DANCERS = [["godzilla", 40], ["cat", 37], ["maiko", 34], ["teddy", 39], ["samurai", 34], ["salaryman", 35], ["kabuki", 36], ["panda", 39], ["daruma", 40]];
 const DANCER_HEIGHT = 40;
+const DIMMED_DANCER_OPACITY = 0.4;
 function dancer(a) {
   let n = Number.isInteger(a.seq) ? a.seq : 0;
   if (!Number.isInteger(a.seq)) for (const ch of a.address) n = (n * 31 + ch.charCodeAt(0)) >>> 0;
@@ -494,8 +496,9 @@ export default class Agents extends View {
       const c = claude.get(a.address);
       const n = (key) => Number(c?.[key] ?? 0);
       const named = sessionTitle(a);
-      const dancing = a.status === "working";
       const background = this.background?.get(a.address) ?? 0;
+      const dimmedDancer = a.status !== "working" && background > 0;
+      const dancing = a.status === "working" || dimmedDancer;
       return v_flex()
         .id(`ag-${a.address}`)
         .relative() // the dancer's corner
@@ -524,7 +527,7 @@ export default class Agents extends View {
         })
         .on_mouse_up("left", () => this.endDock())
         .on_click(() => run("pane.focus", { pane: a.pane }))
-        .when(dancing, (el) => el.child(dancer(a).absolute().top(4).right(8)))
+        .when(dancing, (el) => el.child(dancer(a).absolute().top(4).right(8).opacity(dimmedDancer ? DIMMED_DANCER_OPACITY : 1)))
         // The agent and its space; the fold and, under the pointer, the pin (left of the dancer).
         .child(h_flex().h(18).gap(8).items_center().when(dancing, (el) => el.pr(42))
           .when(Boolean(pic), el => el.child(div().id(`agent-fold-${a.address}`)

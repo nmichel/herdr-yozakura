@@ -43,7 +43,8 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
     Godzilla, a cat, a maiko, a teddy bear, a samurai, a salaryman, a kabuki actor, a red panda,
     a daruma;
     `yozakura-agents/dancers/*.gif`) plays in its card's top right, 4 px from the top and 8 from
-    the right, 40 px high at its own width (34 to 40 px). Each agent keeps its own,
+    the right, 40 px high at its own width (34 to 40 px); not working but with commands still
+    running in its background (see Background commands), the dancer stays at 40 % opacity. Each agent keeps its own,
     picked by its number (`seq`), so agents started one after another get different ones.
   - Footer (72 px): Settings, Add machine.
 - **Top bar** (38 px; 74 px when the shown desktop has several panels):
