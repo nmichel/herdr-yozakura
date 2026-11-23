@@ -2,9 +2,10 @@
 
 A cherry-blossom window for coding agents: every panel is a shoji, a wooden frame around washi
 paper, over a sky with a blossoming branch and falling petals. The sidebar lists spaces
-and agents (a small dancer plays on every agent that works); the top bar shows one thumbnail per
-desktop (the panels docked together) and, under it, one per panel of the shown desktop; the
-focused panel's title bar is tinted pink.
+and agents (a small dancer plays on every agent that works) over gauges of the computer's CPU,
+memory, disk and network; the top bar shows one thumbnail per desktop (the panels docked
+together) and, under it, one per panel of the shown desktop; the focused panel's title bar is
+tinted pink.
 
 ![Yozakura](preview.png)
 
@@ -292,7 +293,7 @@ real one (agent cards show account emails):
 
 ## Done when
 
-- `herdr-app check` passes for the ten `yozakura-*` mods; `layout.switch {name: "yozakura"}`
+- `herdr-app check` passes for the eleven `yozakura-*` mods; `layout.switch {name: "yozakura"}`
   shows the window above with no `layout.error` and no error in `herdr-app status`.
 - Settings shows the layout with its preview; Settings → Theme offers `tsukiyo`, `yugure` and
   `harugasumi`, and picking one puts its sky behind the cards within a second.
@@ -309,4 +310,7 @@ real one (agent cards show account emails):
 - With `extras/programs.example.json` as `programs.json`, + offers Claude Work and Claude
   Personal, and no Claude Code.
 - A Claude Code agent that ends its turn with a command in the background (`sleep 60`) spins
-  in green, its card counts 1, within 3 s; both go when the command ends.
+  in green, its card counts 1 and its space's row spins in green, within 3 s; all go when the
+  command ends.
+- The gauges card shows four readings within 2 s; `yes > /dev/null` raises CPU, copying a
+  large file raises Disk, a download raises Network.
