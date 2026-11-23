@@ -77,7 +77,8 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
   the others (with shoji, a rail of wood as their header; their buttons and counts in the kit's inks).
 - **Commit detail** (560 px, right of the side panel, hidden until a commit is picked in
   Commits): a card like the others; its header "Commit", the short hash, the commit's +/−
-  counts and ×; then the subject, author, date (`YYYY-MM-DD HH:MM`) and parents, the message
+  counts, ‹ and › (widen and narrow it by 80 px, 320 to 1100; dimmed at a limit) and ×; its
+  left edge drags its width too (the col-resize pointer); then the subject, author, date (`YYYY-MM-DD HH:MM`) and parents, the message
   (up to 140 px, scrolling), the files it touches with their counts ("binaire" for a binary),
   at most 8 rows before scrolling (clicking one highlights it and scrolls the diff to its
   header), and its whole diff in the terminal font, as in Changes, with
@@ -223,7 +224,9 @@ Mods (each `place: "none"`):
   the `commit` block (`layout.show`); picking it again, or another repository, clears it and
   hides the block.
 - `yozakura-commit`: the commit detail; `git show` three times (its fields, `--numstat`, the
-  patch, `--diff-merges=first-parent -M`), on the repository's machine. Every 500 ms it hides
+  patch, `--diff-merges=first-parent -M`), on the repository's machine. Its width goes through
+  `layout.resize {id: "commit"}`; while its edge drags it shares `yozakura.commit.resize`
+  { x, width } and Commits lays a veil that follows the pointer too. Every 500 ms it hides
   itself when the side panel is closed or shows Files or Changes.
 
 Shipped mods used: `menu`, `picker`,
@@ -245,6 +248,12 @@ with faint mottling and fibers, woods with their grain along them, seamless end 
 
 ## Watch out
 
+- The detail doesn't rely on Herdr's own boundary drag (between two fixed widths, which one it
+  resizes isn't documented): it drags its own edge. A mod only hears the pointer
+  while it is over it: going left the pointer crosses Commits, whose veil follows it too, and
+  a release over a terminal reaches no mod, so the detail asks macOS whether the button is
+  still down (`osascript`, every 150 ms while dragging). A mod can't import another's file:
+  the few lines that follow the pointer are in both.
 - `VirtualListScrollHandle.scroll_to_item(n, "top")` brings a row to the nearest edge: going
   down that is the bottom. To put a file's header at the top, the commit detail aims at the
   row that will be last on screen (`n` + the visible rows − 1, from the list's render range).
@@ -335,6 +344,9 @@ real one (agent cards show account emails):
   command ends.
 - Clicking a commit in Commits opens the detail with its message, files and diff; clicking it
   again closes it; picking Files closes it too.
+- The detail's ‹ makes it 80 px wider and › narrower, Commits keeping its width; dragging its
+  left edge to the left widens it, even with the pointer over Commits, and the drag ends when
+  the button is let go, wherever.
 - In the detail, clicking the last file brings its header to the top of the diff; clicking the
   first one then brings the diff back to its start.
 - The gauges card shows four readings within 2 s; `yes > /dev/null` raises CPU, copying a

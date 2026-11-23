@@ -8,7 +8,32 @@
 // something other than Commits.
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, v_virtual_list, VirtualListScrollHandle } from "gpui-base";
-import { exec, theme, settings, shared, setShared, layout, run } from "herdr";
+import { exec, theme, settings, shared, setShared, layout, run, window } from "herdr";
+
+// Its width: the header's ← and → widen and narrow it by STEP; its left edge drags (shared as
+// "yozakura.commit.resize" { x, width } while it does, so Commits, which the pointer crosses
+// going left, follows the drag too). Kept in the layout (`layout.resize`), MIN to MAX.
+const STEP = 80, MIN = 320, MAX = 1100;
+const width = () => find(layout(), "commit")?.size?.px ?? 560;
+function resize(px) {
+  const next = Math.round(Math.min(MAX, Math.max(MIN, px)));
+  if (next !== width()) run("layout.resize", { id: "commit", px: next });
+}
+// While dragging: the edge follows the pointer (`x`, in window coordinates).
+function follow(x) {
+  const d = shared("yozakura.commit.resize");
+  if (d) resize(d.width + (d.x - x));
+}
+// Whether the system says the left button is up (macOS, through osascript, as yozakura-tabs
+// does): a release over a terminal reaches no mod, so a drag ends when this says so.
+async function leftButtonUp() {
+  if (window()?.platform !== "macos") return null;
+  try {
+    const answer = await exec("osascript", ["-l", "JavaScript", "-e", 'ObjC.import("AppKit"); $.NSEvent.pressedMouseButtons']);
+    const buttons = Number(answer.stdout.trim());
+    return Number.isInteger(buttons) ? (buttons & 1) === 0 : null;
+  } catch { return null; }
+}
 
 function rail(kit, h) {
   return [
@@ -65,6 +90,16 @@ export default class CommitDetail extends View {
     this.key = null; this.info = null; this.files = []; this.rows = []; this.width = 0; this.error = null; this.cut = false;
     this.starts = new Map(); this.current = null; // path -> its header row in the diff; the file clicked last
     this.scroll = VirtualListScrollHandle.new();
+    if (shared("yozakura.commit.resize")) setShared("yozakura.commit.resize", null);
+    // A drag let go where no mod hears it (a terminal): ended as soon as the button is up.
+    cx.timer.every(150, (cx) => {
+      if (!shared("yozakura.commit.resize") || this.asking) return;
+      this.asking = true;
+      cx.spawn(async () => {
+        try { if (await leftButtonUp()) setShared("yozakura.commit.resize", null); }
+        finally { this.asking = false; }
+      });
+    });
     // The side panel closed, or shows Files or Changes: this one goes too.
     cx.timer.every(500, () => {
       const root = layout();
@@ -123,6 +158,13 @@ export default class CommitDetail extends View {
     this.scroll.scroll_to_item(Math.min(this.rows.length - 1, n + fit - 1), "top");
   }
 
+  sizeButton(id, icon, tip, enabled, action, t, kit) {
+    return div().id(id).size(24).flex_none().flex().items_center().justify_center().rounded(corner(6)).tooltip(tip)
+      .text_color(enabled ? (kit ? kit.inkDim : t.muted) : t.dim).when(!enabled, (e) => e.opacity(0.4))
+      .when(enabled, (e) => e.cursor_pointer().hover((s) => s.bg(kit ? kit.hover : t.hover).text_color(kit ? kit.ink : t.foreground)).on_click(action))
+      .child(svg(`mods/yozakura-chrome/${icon}.svg`).size(14));
+  }
+
   diffRow({ kind, number, text }, t) {
     if (kind === "f") return h_flex().w_full().h(20).flex_none().px(12).gap(6).items_center().bg(t.surface).border_t(1).border_color(t.border)
       .text_color(t.foreground).font_semibold().child(div().truncate().child(text));
@@ -146,6 +188,8 @@ export default class CommitDetail extends View {
       .when(Boolean(i), (e) => e.child(div().px(6).py(1).rounded(corner(4)).bg(t.surface).font_family(mono).text_size(11).text_color(t.muted).child(i.short)))
       .child(div().flex_1())
       .when(this.files.length > 0, (e) => e.child(paper(div().text_size(11).text_color(t.ansi2).child(`+${add}`))).child(paper(div().text_size(11).text_color(t.ansi1).child(`−${del}`))))
+      .child(this.sizeButton("commit-wider", "chevron-left", "Élargir", width() < MAX, () => resize(width() + STEP), t, kit))
+      .child(this.sizeButton("commit-narrower", "chevron-right", "Rétrécir", width() > MIN, () => resize(width() - STEP), t, kit))
       .child(div().id("commit-close").size(24).flex_none().flex().items_center().justify_center().rounded(corner(6)).cursor_pointer()
         .text_color(kit ? kit.inkDim : t.muted).hover((s) => s.bg(kit ? kit.hover : t.hover).text_color(kit ? kit.ink : t.foreground))
         .on_click(() => this.close()).child(svg("mods/yozakura-chrome/x.svg").size(14)));
@@ -188,6 +232,13 @@ export default class CommitDetail extends View {
         .child(Scrollbar.vertical("commit-diff").viewport_from_layout().absolute().inset_0())
         .when(this.rows.length === 0, (e) => e.child(div().absolute().top(6).px(12).text_color(t.dim).child("Aucun changement de contenu")))))
       .when(this.cut, (e) => e.child(div().px(12).py(4).border_t(1).border_color(t.border).text_size(11).text_color(t.dim).child(`Diff coupé après ${MAX_LINES} lignes`)))
+      // The left edge: pressed, it drags the panel's width; meanwhile a veil over the card
+      // takes the pointer's moves and the release.
+      .child(div().id("commit-edge").absolute().top(0).bottom(0).left(0).w(8).cursor_col_resize()
+        .on_mouse_down("left", (e, cx) => { setShared("yozakura.commit.resize", { x: e.position.x, width: width() }); cx.stop_propagation(); }))
+      .when(Boolean(shared("yozakura.commit.resize")), (e) => e.child(div().id("commit-resize-veil").absolute().inset_0().cursor_col_resize()
+        .on_mouse_move((ev) => follow(ev.position.x))
+        .on_mouse_up("left", () => setShared("yozakura.commit.resize", null))))
       .when(Boolean(shared("yozakura.dock.drag")), (e) => e.child(div().id("commit-drag-veil").absolute().inset_0().cursor_not_allowed()
         .on_mouse_up("left", () => setShared("yozakura.dock.drag", null))));
   }

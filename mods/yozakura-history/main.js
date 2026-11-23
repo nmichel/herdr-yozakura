@@ -5,7 +5,7 @@
 // bouton « Fetch » qui lance `git fetch --prune` quand on clique dessus.
 import { View, div, svg, image } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar } from "gpui-base";
-import { spaces, panes, focused, exec, watchFolder, theme, settings, run, shared, setShared } from "herdr";
+import { spaces, panes, focused, exec, watchFolder, theme, settings, run, shared, setShared, layout } from "herdr";
 // The shoji look (shared "yozakura.shoji", see yozakura-chrome): the layout gives the card its
 // paper and frame; the header is a rail of wood, `h` px tall (its texture's strips side by
 // side, as wide as any card, and a line under it); corners inside are nearly square.
@@ -16,6 +16,17 @@ function rail(kit, h) {
   ];
 }
 const corner = (r) => (shared("yozakura.shoji") ? 3 : r);
+
+// The commit detail's edge dragged (shared "yozakura.commit.resize" { x, width }, see
+// yozakura-commit, which holds the same lines: a mod can't import another's): its width
+// follows the pointer, MIN to MAX.
+function follow(x) {
+  const d = shared("yozakura.commit.resize");
+  if (!d) return;
+  const find = (n) => n?.id === "commit" ? n : (n?.children ?? []).map(find).find(Boolean) ?? null;
+  const px = Math.round(Math.min(1100, Math.max(320, d.width + (d.x - x))));
+  if (px !== find(layout())?.size?.px) run("layout.resize", { id: "commit", px });
+}
 
 
 function location() {
@@ -243,6 +254,11 @@ export default class GitHistory extends View {
         .child(v_flex().id("git-history-list").absolute().inset_0().overflow_y_scroll().p(6)
           .children(rows.length ? rows : [div().p(8).text_color(t.dim).child(empty)]))
         .child(Scrollbar.vertical("git-history-list").absolute().inset_0()))
+      // The commit detail's edge dragged (see yozakura-commit): the pointer crosses this panel
+      // going left, so a veil here follows it too, and takes the release.
+      .when(Boolean(shared("yozakura.commit.resize")), (e) => e.child(div().id("history-resize-veil").absolute().inset_0().cursor_col_resize()
+        .on_mouse_move((ev) => follow(ev.position.x))
+        .on_mouse_up("left", () => setShared("yozakura.commit.resize", null))))
       // Something dragged (a desktop, a panel, an agent card): no drop here. A veil keeps the
       // no-drop pointer over the rows' own, and letting go on it cancels the drag.
       .when(Boolean(shared("yozakura.dock.drag")), (e) => e.child(div().id("history-drag-veil").absolute().inset_0().cursor_not_allowed()
