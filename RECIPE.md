@@ -75,6 +75,14 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
   bar's buttons a paper card in a 4 px frame.
 - **Side panel** (368 px, hidden until opened from the bar): Files, Changes or Commits, cards like
   the others (with shoji, a rail of wood as their header; their buttons and counts in the kit's inks).
+- **Commit detail** (560 px, right of the side panel, hidden until a commit is picked in
+  Commits): a card like the others; its header "Commit", the short hash, the commit's +/−
+  counts and ×; then the subject, author, date (`YYYY-MM-DD HH:MM`) and parents, the message
+  (up to 140 px, scrolling), the files it touches with their counts ("binaire" for a binary),
+  at most 8 rows before scrolling (clicking one highlights it and scrolls the diff to its
+  header), and its whole diff in the terminal font, as in Changes, with
+  a header row per file. A merge shows its diff against its first parent; past 20,000 lines the
+  diff is cut and says so.
 - **Status bar** (32 px): the folder and branch of the terminal in view; how many agents, how
   many work, how many wait for you; Claude's context window, 5-hour and 7-day usage as gauges
   (the usage of the shown agent's account).
@@ -135,6 +143,9 @@ against the cards.
   leave it. Showing an agent (from its card, its pane or a shortcut) scrolls the list just
   enough to bring its card into view (its group's header when the group is folded); it does so
   again only when its card moves to another section, so scrolling away from it stays.
+- Commits: clicking a commit opens its detail right of the side panel (the row stays
+  highlighted); clicking it again or the detail's × closes it, as does closing the side panel,
+  showing Files or Changes, or moving to another repository.
 - Spaces: click to switch, right-click for the menu, drag to reorder, + for a new space (in the
   home folder).
 - Moving to a space: drag a desktop (all its panels), a panel or an agent card onto a space (its
@@ -175,8 +186,9 @@ root (row; background image, titlebar none, theme yozakura)
    ├─ **tabs**     block  yozakura-tabs                   38 px (the mod resizes it), window_drag
    ├─ work-body (row)
    │  ├─ **main**  block  { tab: active, pane: header yozakura-pane 30 px, lone, radius 14 }
-   │  └─ **panel** column 368 px, hidden → **panel-body** stack: files (yozakura-files), changes
-   │                 (yozakura-changes), commits (yozakura-history)
+   │  ├─ **panel** column 368 px, hidden → **panel-body** stack: files (yozakura-files), changes
+   │  │              (yozakura-changes), commits (yozakura-history)
+   │  └─ **commit** block yozakura-commit                 560 px (320–1100), hidden
    └─ status       block  yozakura-status                 32 px
 ```
 
@@ -206,7 +218,13 @@ Mods (each `place: "none"`):
 - `yozakura-new-menu`: the + popup; reads `programs.json` (`readTextFile`).
 - `yozakura-files`, `yozakura-changes`, `yozakura-history`: the side panel's Files, Changes and
   Commits, Herdr's own panels (they read files and run `git`) restyled; the layout's blocks
-  `files`, `changes`, `commits` get their frame and paper from `yozakura-chrome` (`SIDE`).
+  `files`, `changes`, `commits` and `commit` get their frame and paper from `yozakura-chrome`
+  (`SIDE`). Commits shares the commit picked as `yozakura.commit` { hash, root, on } and shows
+  the `commit` block (`layout.show`); picking it again, or another repository, clears it and
+  hides the block.
+- `yozakura-commit`: the commit detail; `git show` three times (its fields, `--numstat`, the
+  patch, `--diff-merges=first-parent -M`), on the repository's machine. Every 500 ms it hides
+  itself when the side panel is closed or shows Files or Changes.
 
 Shipped mods used: `menu`, `picker`,
 `machine-add`, and `frame/welcome/herdr.png`.
@@ -227,6 +245,9 @@ with faint mottling and fibers, woods with their grain along them, seamless end 
 
 ## Watch out
 
+- `VirtualListScrollHandle.scroll_to_item(n, "top")` brings a row to the nearest edge: going
+  down that is the bottom. To put a file's header at the top, the commit detail aims at the
+  row that will be last on screen (`n` + the visible rows − 1, from the list's render range).
 - A pane's frame takes one color (`border`), no image: the shoji's sides are plain wood; only
   the rails (drawn by mods) show the grain. The washi comes from the layout (`background:
   {image, fit: "cover"}` on the pane frame and the card blocks), so a mod over it draws no fill.
@@ -293,7 +314,7 @@ real one (agent cards show account emails):
 
 ## Done when
 
-- `herdr-app check` passes for the eleven `yozakura-*` mods; `layout.switch {name: "yozakura"}`
+- `herdr-app check` passes for the twelve `yozakura-*` mods; `layout.switch {name: "yozakura"}`
   shows the window above with no `layout.error` and no error in `herdr-app status`.
 - Settings shows the layout with its preview; Settings → Theme offers `tsukiyo`, `yugure` and
   `harugasumi`, and picking one puts its sky behind the cards within a second.
@@ -312,5 +333,9 @@ real one (agent cards show account emails):
 - A Claude Code agent that ends its turn with a command in the background (`sleep 60`) spins
   in green, its card counts 1 and its space's row spins in green, within 3 s; all go when the
   command ends.
+- Clicking a commit in Commits opens the detail with its message, files and diff; clicking it
+  again closes it; picking Files closes it too.
+- In the detail, clicking the last file brings its header to the top of the diff; clicking the
+  first one then brings the diff back to its start.
 - The gauges card shows four readings within 2 s; `yes > /dev/null` raises CPU, copying a
   large file raises Disk, a download raises Network.

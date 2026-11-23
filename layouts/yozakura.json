@@ -239,6 +239,28 @@
               },
               "min": 280,
               "max": 900
+            },
+            {
+              "id": "commit",
+              "type": "block",
+              "content": {
+                "mod": "yozakura-commit"
+              },
+              "size": {
+                "px": 560
+              },
+              "min": 320,
+              "max": 1100,
+              "hidden": true,
+              "background": {
+                "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                "fit": "cover"
+              },
+              "border": {
+                "width": 4,
+                "color": "#c8a978"
+              },
+              "radius": 4
             }
           ],
           "padding": 0,

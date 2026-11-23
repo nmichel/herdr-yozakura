@@ -58,8 +58,10 @@ export default class GitHistory extends View {
   reset() {
     this.root = null; this.gitdir = null; this.branch = null; this.upstream = null;
     this.ahead = 0; this.behind = 0; this.commits = []; this.incoming = [];
-    this.outgoing = new Set(); this.base = null; this.open = null; this.stat = []; this.error = null;
+    this.outgoing = new Set(); this.base = null; this.error = null;
     this.note = null; this.watched = null;
+    // Another repository (or none): the commit shown in detail belonged to the last one.
+    if (shared("yozakura.commit")) { setShared("yozakura.commit", null); run("layout.hide", { id: "commit" }); }
   }
 
   watch(gitdir, cx) {
@@ -151,16 +153,12 @@ export default class GitHistory extends View {
     });
   }
 
-  pick(hash, cx) {
-    if (this.open === hash) { this.open = null; this.stat = []; cx.notify(); return; }
-    this.open = hash; this.stat = []; cx.notify();
-    const root = this.root, on = this.on;
-    cx.spawn(async (cx) => {
-      const r = await exec("git", [...READ, "show", "--stat=60", "--format=%b", hash], { cwd: root, on });
-      if (this.open !== hash) return;
-      this.stat = r.stdout.split("\n").map((l) => l.trimEnd()).filter(Boolean).slice(0, 40);
-      cx.notify();
-    });
+  // A commit picked: shown in detail in the panel to the right (yozakura-commit, the layout's
+  // `commit` block), shared as "yozakura.commit". Picking it again closes that panel.
+  pick(hash) {
+    if (shared("yozakura.commit")?.hash === hash) { setShared("yozakura.commit", null); run("layout.hide", { id: "commit" }); return; }
+    setShared("yozakura.commit", { hash, root: this.root, on: this.on ?? null });
+    run("layout.show", { id: "commit" });
   }
 
   row(c, t, kind) {
@@ -170,10 +168,10 @@ export default class GitHistory extends View {
     const dot = incoming
       ? div().size(9).rounded(5).border_1().border_color(t.working)
       : div().size(9).rounded(5).when(unpushed, (e) => e.bg(t.accent)).when(!unpushed, (e) => e.border_1().border_color(t.dim));
-    const open = this.open === c.hash;
+    const open = shared("yozakura.commit")?.hash === c.hash;
     return v_flex().id(`commit-${kind}-${c.hash}`).flex_none().px(8).py(6).gap(2).rounded(corner(7)).cursor_pointer()
       .when(open, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover))
-      .on_click((_e, cx) => this.pick(c.hash, cx))
+      .on_click(() => this.pick(c.hash))
       .child(h_flex().gap(8).items_center()
         .child(h_flex().w(12).flex_none().justify_center().child(dot))
         .child(div().flex_1().min_w(0).truncate().text_color(incoming ? t.muted : t.foreground).child(c.subject || "(sans message)")))
@@ -181,10 +179,7 @@ export default class GitHistory extends View {
         .child(div().flex_none().font_family(mono).text_color(unpushed ? t.accent : incoming ? t.working : t.muted).child(c.short))
         .child(div().min_w(0).truncate().child(c.author))
         .child(div().flex_1())
-        .child(div().flex_none().child(ago(c.time))))
-      .when(open && this.stat.length > 0, (e) => e.child(v_flex().mt(4).ml(20).p(8).rounded(corner(6)).bg(t.surface)
-        .font_family(mono).text_size(10.5).text_color(t.muted)
-        .children(this.stat.map((l, i) => div().id(`stat-${i}`).truncate().child(l)))));
+        .child(div().flex_none().child(ago(c.time))));
   }
 
   status(t) {

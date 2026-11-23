@@ -97,9 +97,10 @@ function applyLook() {
   run("layout.set", { layout: next });
 }
 const CARDS = ["brand", "spaces", "agents", "gauges", "sidebar-footer", "status"];
-// The side panel's blocks (yozakura-files, -changes, -history): cards like the others with
-// shoji; without, their mods draw their own card, so the layout gives them nothing.
-const SIDE = ["files", "changes", "commits"];
+// The side panel's blocks (yozakura-files, -changes, -history) and the commit detail beside
+// it (yozakura-commit): cards like the others with shoji; without, their mods draw their own
+// card, so the layout gives them nothing.
+const SIDE = ["files", "changes", "commits", "commit"];
 
 // The wood of a shoji rail, `h` px tall: its texture's strips side by side (as wide as any
 // card), and a line under it unless the rail is the whole card.
