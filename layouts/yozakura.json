@@ -74,6 +74,25 @@
           "gap": 12
         },
         {
+          "id": "gauges",
+          "type": "block",
+          "content": {
+            "mod": "yozakura-gauges"
+          },
+          "size": {
+            "px": 100
+          },
+          "background": {
+            "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+            "fit": "cover"
+          },
+          "border": {
+            "width": 4,
+            "color": "#c8a978"
+          },
+          "radius": 4
+        },
+        {
           "id": "sidebar-footer",
           "type": "block",
           "content": {

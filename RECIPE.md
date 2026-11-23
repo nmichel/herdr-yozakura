@@ -24,7 +24,7 @@ others) with a 1 px darker line under them. Corners inside (agent cards, space r
 nearly square (3 px). Without shoji: 14 px radius, a 1 px `border`, filled with the theme's
 color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
 
-- **Sidebar** (268 px, 44–480): four cards, 12 px apart.
+- **Sidebar** (268 px, 44–480): five cards, 12 px apart.
   - Brand (38 px): the Herdr logo and "Herdr"; Search (opens `picker`) and the sidebar toggle.
   - Spaces (half of the rest): a header with +; one row per space, a letter avatar in a muted
     Japanese pigment (`#4a8c84`, `#b97446`, `#4f72a6`, `#7c68ad`, `#5c8e5e`, `#b45a72`), its name,
@@ -46,6 +46,11 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
     the right, 40 px high at its own width (34 to 40 px); not working but with commands still
     running in its background (see Background commands), the dancer stays at 40 % opacity. Each agent keeps its own,
     picked by its number (`seq`), so agents started one after another get different ones.
+  - Gauges (100 px): this computer's load, one row each: CPU, Memory, Disk, Network; a label,
+    a 7 px gauge as in the status bar and the reading (tooltip: memory used of total, network
+    down and up). CPU and memory in proportion, green / yellow from 50 % / red from 80 %; disk
+    and network in blue (`done`), logarithmic from 1 KB/s to 2 GB/s (disk) and 125 MB/s
+    (network). On the rail, four upright bars side by side, the readings in their tooltips.
   - Footer (72 px): Settings, Add machine.
 - **Top bar** (38 px; 74 px when the shown desktop has several panels):
   - One pill per desktop (a Herdr tab): a screen icon (whole for one panel, split for several),
@@ -163,6 +168,7 @@ root (row; background image, titlebar none, theme yozakura)
 │  ├─ sidebar-lists column
 │  │  ├─ spaces    block  yozakura-spaces                 weight 1
 │  │  └─ agents    block  yozakura-agents                 weight 1
+│  ├─ gauges     block  yozakura-gauges                 100 px
 │  └─ sidebar-footer block yozakura-chrome {footer:true}  72 px
 └─ work (column)
    ├─ **tabs**     block  yozakura-tabs                   38 px (the mod resizes it), window_drag
@@ -180,7 +186,7 @@ Mods (each `place: "none"`):
   `yozakura.mainOpacity` and `yozakura.shoji` (the theme's shoji kit: textures, frame color,
   inks; null when off), and rewrites the layout (`layout.set`) to match the theme shown: its
   sky on the root; with shoji, the frame and washi of the main pane and of the cards `brand`,
-  `spaces`, `agents`, `sidebar-footer`, `status` (`SHOJI`, `CARDS`), else the main pane's faded
+  `spaces`, `agents`, `gauges`, `sidebar-footer`, `status` (`SHOJI`, `CARDS`), else the main pane's faded
   background and the thin borders; checked every second, so a theme picked in Settings brings
   its sky and its shoji.
   Holds the shared icons (Lucide-style SVGs) the other mods use.
@@ -189,6 +195,9 @@ Mods (each `place: "none"`):
 - `yozakura-agents`: agents list, sort popup (`props: {sortMenu: true}`), dancers, the safety
   net that brings lost terminals back (`terminal.keep`), the background commands' scan (`exec`
   of `ps`, `hc get`).
+- `yozakura-gauges`: the load gauges; every 2 s one `exec` of `sh` running `iostat` (CPU,
+  disks; a 1 s sample), `vm_stat` and `sysctl hw.memsize` (memory as Activity Monitor's "memory
+  used"), `netstat -ib` (bytes of the `en*` interfaces, between two reads). macOS only.
 - `yozakura-tabs`: the bar; also the desktop name field (`props: {desktop}`, a popup).
 - `yozakura-pane`: pane headers, drop zones, dock (`terminal.park` + `terminal.keep` +
   `pane.swap`) and undock.
@@ -253,7 +262,8 @@ with faint mottling and fibers, woods with their grain along them, seamless end 
 - A popup opened under a thumbnail uses the release event's `bounds` (window coordinates).
   Pressing the thumbnail again closes the popup before the release: remember when it closed
   (its `close()`), or the release reopens it.
-- Built and used on macOS; the window buttons drawn on Linux and Windows are untested.
+- Built and used on macOS; the window buttons drawn on Linux and Windows are untested, and the
+  gauges read macOS tools only (elsewhere they stay empty).
 - Without the status line script, the agent cards and the status bar simply leave out Claude's
   model and gauges.
 

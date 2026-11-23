@@ -96,7 +96,7 @@ function applyLook() {
   if (skyChanged) next.background = { ...(next.background ?? {}), image: sky };
   run("layout.set", { layout: next });
 }
-const CARDS = ["brand", "spaces", "agents", "sidebar-footer", "status"];
+const CARDS = ["brand", "spaces", "agents", "gauges", "sidebar-footer", "status"];
 // The side panel's blocks (yozakura-files, -changes, -history): cards like the others with
 // shoji; without, their mods draw their own card, so the layout gives them nothing.
 const SIDE = ["files", "changes", "commits"];
