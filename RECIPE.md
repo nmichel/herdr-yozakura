@@ -281,7 +281,12 @@ real one (agent cards show account emails):
 - pretend agents: a script that prints a title (OSC 2), a status (OSC 7501
   `app=claude-code:state=working`) and a transcript wrapped to the pane's columns, with
   `claude.*` labels set by `hc label` (`you@example.com`), in small git repos under `~/code`;
-- the brand card without the traffic lights' room (the shot leaves the system buttons out);
+- the brand card without the traffic lights' room (the shot leaves the system buttons out),
+  and the gauges at steady readings rather than the load of the machine taking the shots
+  (both patched in the demo home's copies of the mods); the sidebar at its 268 px, the side
+  panel hidden;
+- one agent idle with a command left in its background (a child shell whose arguments hold
+  `shell-snapshots`), so its space shows the green spinner;
 - closed with `app.quit`, not killed: a killed window installs a waiting update at its next
   start, and the app is the person's too.
 
