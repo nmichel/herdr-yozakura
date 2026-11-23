@@ -91,8 +91,10 @@ against the cards.
 
 - Statuses everywhere: working spins (`working` color), blocked shows a warning (`blocked`
   color), idle and done show a green dot. An idle or done Claude Code agent with commands still
-  running in its background spins in green instead (agent cards, thumbnails, pane headers): it
-  does nothing, but something runs. A space only speaks up when something in it needs you.
+  running in its background spins in green instead (agent cards, thumbnails, pane headers, its
+  space's row): it does nothing, but something runs. A space shows the most pressing of its
+  agents' states: one waiting for you, else one working, else one with background commands,
+  else the green dot (done reads as idle); a space without agents shows nothing.
 - Background commands: every 3 s, `yozakura-agents` lists the shells Claude Code runs its
   commands in (`ps`, arguments holding `shell-snapshots`) under each local Claude agent's
   process (`hc get`: `foreground.pid`). While the agent works, only shells older than its turn
@@ -145,9 +147,10 @@ against the cards.
   and the side panel get a veil while dragging, so their rows' own pointer doesn't show through.
   The terminals themselves are drawn by the app: over them the pointer stays the system's.
 - The side panel shown is remembered per space. The sidebar folds into a rail below 100 px
-  (44 px; 96 px on macOS). The brand card's toggle folds it; on the rail the same button turns
-  into a chevron that unfolds it, right of the traffic lights (centered in full screen, where
-  macOS draws none).
+  (44 px; 96 px on macOS), where each space's tile carries its status as a 12 px round badge
+  over the letter's bottom right corner. The brand card's toggle folds it; on the rail the same
+  button turns into a chevron that unfolds it, right of the traffic lights (centered in full
+  screen, where macOS draws none).
 
 ## Built from
 

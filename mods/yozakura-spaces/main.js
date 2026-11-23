@@ -88,22 +88,36 @@ export function tone(t, status) {
 }
 
 // A space's activity, as in yozakura-agents: working spins, blocked (waiting for you)
-// warns, idle and done show a green dot.
+// warns, idle and done show a green dot; idle with commands still running in an agent's
+// background, a green spinner: nothing to do, but busy.
 function status(t, s) {
   const slot = h_flex().size(14).flex_none().items_center().justify_center();
   if (s === "working") return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.working).spin(900));
+  if (s === "background") return slot.child(svg("mods/yozakura-chrome/spinner.svg").size(12).text_color(t.ansi2).spin(900));
   if (s === "blocked") return slot.child(svg("mods/yozakura-agents/warning.svg").size(14).text_color(t.blocked));
   return slot.child(div().size(8).rounded(4).bg(t.ansi2));
 }
 
-// Each space's state from its agents: one waiting for you, else one working, else idle.
-// Done reads as idle (same green dot), so it never hides an agent still working,
+// The same, small, on a tile of the rail: a round badge over the letter's bottom right
+// corner, ringed by the card's color so it reads on any pigment.
+function badge(t, s) {
+  const mark = s === "working" ? svg("mods/yozakura-chrome/spinner.svg").size(8).text_color(t.working).spin(900)
+    : s === "background" ? svg("mods/yozakura-chrome/spinner.svg").size(8).text_color(t.ansi2).spin(900)
+    : s === "blocked" ? svg("mods/yozakura-agents/warning.svg").size(9).text_color(t.blocked)
+    : div().size(6).rounded(3).bg(t.ansi2);
+  return h_flex().absolute().bottom(1).right(1).size(12).rounded(6).bg(t.background).items_center().justify_center().child(mark);
+}
+
+// Each space's state from its agents: one waiting for you, else one working, else one with
+// commands running in its background (shared "yozakura.background", see yozakura-agents),
+// else idle. Done reads as idle (same green dot), so it never hides an agent still working,
 // as the space's own status would (it ranks done above working).
-const RANK = { idle: 1, working: 2, blocked: 3 };
-function activity(list) {
+const RANK = { idle: 1, background: 2, working: 3, blocked: 4 };
+function activity(list, background) {
   const by = new Map();
   for (const a of list) {
-    const s = a.status === "done" ? "idle" : a.status;
+    let s = a.status === "done" ? "idle" : a.status;
+    if (s === "idle" && background[a.address]) s = "background";
     if (!by.has(a.space) || RANK[s] > RANK[by.get(a.space)]) by.set(a.space, s);
   }
   return by;
@@ -576,7 +590,8 @@ export default class Spaces extends View {
       .on_mouse_up("left", (_e, cx) => this.drop(w, cx))
       .on_click(() => run("space.select", { id: w.id }))
       .on_mouse_down("right", () => this.menu(w))
-      .child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#fbf7f0").child([...w.name][0]?.toUpperCase() ?? "?"));
+      .child(h_flex().size(18).flex_none().rounded(5).bg(fill).items_center().justify_center().text_size(10.5).font_bold().text_color("#fbf7f0").child([...w.name][0]?.toUpperCase() ?? "?"))
+      .when(this.activity.has(w.id), el => el.child(badge(t, this.activity.get(w.id))));
   }
 
   render() {
@@ -596,7 +611,7 @@ export default class Spaces extends View {
     }
     if (changed) setShared("space.colors", kept);
     // Read the agents once for every row: each host read copies the whole list.
-    this.activity = activity(agents());
+    this.activity = activity(agents(), shared("yozakura.background") ?? {});
     // With shoji (shared "yozakura.shoji", see yozakura-chrome) the layout gives the card its
     // paper and frame, and the header is a rail of wood.
     const kit = shared("yozakura.shoji");
