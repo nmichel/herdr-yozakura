@@ -8,31 +8,45 @@
 // something other than Commits.
 import { View, div, image, svg } from "gpui-kit";
 import { v_flex, h_flex, Scrollbar, v_virtual_list, VirtualListScrollHandle } from "gpui-base";
-import { exec, theme, settings, shared, setShared, layout, run, window } from "herdr";
+import { exec, theme, settings, shared, setShared, layout, run } from "herdr";
 
-// Its width: the header's ← and → widen and narrow it by STEP; its left edge drags (shared as
-// "yozakura.commit.resize" { x, width } while it does, so Commits, which the pointer crosses
-// going left, follows the drag too). Kept in the layout (`layout.resize`), MIN to MAX.
-const STEP = 80, MIN = 320, MAX = 1100;
-const width = () => find(layout(), "commit")?.size?.px ?? 560;
+// Its width. The side panel and the detail share the layout's `panel` row, both by weight,
+// each weight their width in px: they split the row between them, so Herdr's boundary drag
+// between them moves the split, and the one between the terminal and the row scales both.
+// Herdr's drags don't hold to min or max, but shares can't spill out of the row, so nothing
+// leaves the window. Showing the detail grows the row by GAP and the detail (the side panel
+// keeps its width, the terminal gives the room), hiding it shrinks the row back to the side
+// panel; hidden, the detail's weight keeps its last width. ‹ and › widen and narrow it by
+// STEP, MIN to MAX, the side panel keeping its width.
+const STEP = 80, MIN = 320, MAX = 1100, GAP = 12;
+const node = (id) => find(layout(), id);
+// The side panel's and the detail's widths now (px). An older layout gave the detail px.
+function widths() {
+  const row = node("panel")?.size?.px ?? 0, commit = node("commit"), side = node("panel-main");
+  const c = commit?.size?.weight ?? commit?.size?.px ?? 560;
+  if (commit?.hidden) return { row, side: row, detail: c };
+  if (commit?.size?.px) return { row, side: row - GAP - c, detail: c };
+  const s = side?.size?.weight ?? 1, total = Math.max(0, row - GAP);
+  return { row, side: Math.round((total * s) / (s + c)), detail: Math.round((total * c) / (s + c)) };
+}
+const width = () => widths().detail;
+// The row `row` px wide, the side panel `side` px and the detail `detail` px (as weights), in
+// one layout.set.
+function apply(row, side, detail) {
+  const next = JSON.parse(JSON.stringify(layout()));
+  const panel = find(next, "panel"), main = find(next, "panel-main"), commit = find(next, "commit");
+  delete panel.max; delete panel.min; delete commit.max; delete commit.min; delete main.min; delete panel.resizable;
+  panel.size = { px: Math.round(row) };
+  main.size = { weight: Math.max(1, Math.round(side)) };
+  commit.size = { weight: Math.max(1, Math.round(detail)) };
+  run("layout.set", { layout: next });
+}
+// ‹ and ›: the detail by STEP, the row by as much while it shows (the side panel keeps its width).
 function resize(px) {
-  const next = Math.round(Math.min(MAX, Math.max(MIN, px)));
-  if (next !== width()) run("layout.resize", { id: "commit", px: next });
-}
-// While dragging: the edge follows the pointer (`x`, in window coordinates).
-function follow(x) {
-  const d = shared("yozakura.commit.resize");
-  if (d) resize(d.width + (d.x - x));
-}
-// Whether the system says the left button is up (macOS, through osascript, as yozakura-tabs
-// does): a release over a terminal reaches no mod, so a drag ends when this says so.
-async function leftButtonUp() {
-  if (window()?.platform !== "macos") return null;
-  try {
-    const answer = await exec("osascript", ["-l", "JavaScript", "-e", 'ObjC.import("AppKit"); $.NSEvent.pressedMouseButtons']);
-    const buttons = Number(answer.stdout.trim());
-    return Number.isInteger(buttons) ? (buttons & 1) === 0 : null;
-  } catch { return null; }
+  const w = widths(), next = Math.round(Math.min(MAX, Math.max(MIN, px)));
+  if (next === w.detail) return;
+  if (node("commit")?.hidden) apply(w.row, w.row, next);
+  else apply(w.side + GAP + next, w.side, next);
 }
 
 function rail(kit, h) {
@@ -90,22 +104,39 @@ export default class CommitDetail extends View {
     this.key = null; this.info = null; this.files = []; this.rows = []; this.width = 0; this.error = null; this.cut = false;
     this.starts = new Map(); this.current = null; // path -> its header row in the diff; the file clicked last
     this.scroll = VirtualListScrollHandle.new();
-    if (shared("yozakura.commit.resize")) setShared("yozakura.commit.resize", null);
-    // A drag let go where no mod hears it (a terminal): ended as soon as the button is up.
-    cx.timer.every(150, (cx) => {
-      if (!shared("yozakura.commit.resize") || this.asking) return;
-      this.asking = true;
-      cx.spawn(async () => {
-        try { if (await leftButtonUp()) setShared("yozakura.commit.resize", null); }
-        finally { this.asking = false; }
-      });
-    });
+    // Shown or hidden (here, by Commits, or by a layout command): the row grows or shrinks by
+    // the detail and GAP. Checked when drawn too, so showing it lays out at once.
+    this.shown = !node("commit")?.hidden;
+    // An older layout (the detail in px, bounds that Herdr's drags ignore): turned into weights.
+    const commit = node("commit"), panel = node("panel");
+    if (panel?.size?.px && (commit?.size?.px || commit?.min || commit?.max || panel.min || panel.max)) {
+      const w = widths();
+      apply(w.row, Math.max(1, w.side), w.detail);
+    }
+    cx.timer.every(150, () => this.fit());
     // The side panel closed, or shows Files or Changes: this one goes too.
-    cx.timer.every(500, () => {
+    cx.timer.every(500, (cx) => {
       const root = layout();
       const panel = find(root, "panel"), body = find(root, "panel-body"), self = find(root, "commit");
       if (self && !self.hidden && (panel?.hidden || body?.active !== "commits")) this.close();
     });
+  }
+
+  fit() {
+    const shown = !node("commit")?.hidden;
+    if (!node("panel")?.size?.px || shown === this.shown) return;
+    this.shown = shown;
+    // Just shown: the row was the side panel; just hidden: it held both, split by weight.
+    const row = node("panel").size.px, commit = node("commit"), side = node("panel-main");
+    if (shown) {
+      const detail = commit?.size?.weight ?? commit?.size?.px ?? 560;
+      apply(row + GAP + detail, row, detail);
+    } else {
+      const c = commit?.size?.weight ?? commit?.size?.px ?? 560, s = side?.size?.weight ?? 1;
+      const total = Math.max(0, row - GAP), detail = commit?.size?.px ? c : (total * c) / (s + c);
+      const sidePx = commit?.size?.px ? row - GAP - c : (total * s) / (s + c);
+      apply(Math.max(1, sidePx), Math.max(1, sidePx), Math.min(MAX, Math.max(MIN, detail)));
+    }
   }
 
   close() {
@@ -175,6 +206,7 @@ export default class CommitDetail extends View {
   }
 
   render(cx) {
+    this.fit();
     const pick = shared("yozakura.commit");
     this.load(pick, cx);
     const t = theme(), kit = shared("yozakura.shoji"), i = this.info;
@@ -232,13 +264,6 @@ export default class CommitDetail extends View {
         .child(Scrollbar.vertical("commit-diff").viewport_from_layout().absolute().inset_0())
         .when(this.rows.length === 0, (e) => e.child(div().absolute().top(6).px(12).text_color(t.dim).child("Aucun changement de contenu")))))
       .when(this.cut, (e) => e.child(div().px(12).py(4).border_t(1).border_color(t.border).text_size(11).text_color(t.dim).child(`Diff coupé après ${MAX_LINES} lignes`)))
-      // The left edge: pressed, it drags the panel's width; meanwhile a veil over the card
-      // takes the pointer's moves and the release.
-      .child(div().id("commit-edge").absolute().top(0).bottom(0).left(0).w(8).cursor_col_resize()
-        .on_mouse_down("left", (e, cx) => { setShared("yozakura.commit.resize", { x: e.position.x, width: width() }); cx.stop_propagation(); }))
-      .when(Boolean(shared("yozakura.commit.resize")), (e) => e.child(div().id("commit-resize-veil").absolute().inset_0().cursor_col_resize()
-        .on_mouse_move((ev) => follow(ev.position.x))
-        .on_mouse_up("left", () => setShared("yozakura.commit.resize", null))))
       .when(Boolean(shared("yozakura.dock.drag")), (e) => e.child(div().id("commit-drag-veil").absolute().inset_0().cursor_not_allowed()
         .on_mouse_up("left", () => setShared("yozakura.dock.drag", null))));
   }

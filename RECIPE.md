@@ -75,10 +75,10 @@ color at 85 % opacity (`opacity`, and `main_opacity` for the panes).
   bar's buttons a paper card in a 4 px frame.
 - **Side panel** (368 px, hidden until opened from the bar): Files, Changes or Commits, cards like
   the others (with shoji, a rail of wood as their header; their buttons and counts in the kit's inks).
-- **Commit detail** (560 px, right of the side panel, hidden until a commit is picked in
-  Commits): a card like the others; its header "Commit", the short hash, the commit's +/−
-  counts, ‹ and › (widen and narrow it by 80 px, 320 to 1100; dimmed at a limit) and ×; its
-  left edge drags its width too (the col-resize pointer); then the subject, author, date (`YYYY-MM-DD HH:MM`) and parents, the message
+- **Commit detail** (560 px, right of the side panel, in the same `panel` row, hidden until a
+  commit is picked in Commits): a card like the others; its header "Commit", the short hash,
+  the commit's +/− counts, ‹ and › (widen and narrow it by 80 px, 320 to 1100; dimmed at a
+  limit) and ×; then the subject, author, date (`YYYY-MM-DD HH:MM`) and parents, the message
   (up to 140 px, scrolling), the files it touches with their counts ("binaire" for a binary),
   at most 8 rows before scrolling (clicking one highlights it and scrolls the diff to its
   header), and its whole diff in the terminal font, as in Changes, with
@@ -146,7 +146,8 @@ against the cards.
   again only when its card moves to another section, so scrolling away from it stays.
 - Commits: clicking a commit opens its detail right of the side panel (the row stays
   highlighted); clicking it again or the detail's × closes it, as does closing the side panel,
-  showing Files or Changes, or moving to another repository.
+  showing Files or Changes, or moving to another repository. The boundary between Commits and
+  the detail drags like the others.
 - Spaces: click to switch, right-click for the menu, drag to reorder, + for a new space (in the
   home folder).
 - Moving to a space: drag a desktop (all its panels), a panel or an agent card onto a space (its
@@ -187,9 +188,10 @@ root (row; background image, titlebar none, theme yozakura)
    ├─ **tabs**     block  yozakura-tabs                   38 px (the mod resizes it), window_drag
    ├─ work-body (row)
    │  ├─ **main**  block  { tab: active, pane: header yozakura-pane 30 px, lone, radius 14 }
-   │  ├─ **panel** column 368 px, hidden → **panel-body** stack: files (yozakura-files), changes
-   │  │              (yozakura-changes), commits (yozakura-history)
-   │  └─ **commit** block yozakura-commit                 560 px (320–1100), hidden
+   │  └─ **panel** row 368 px (+ 12 + the detail while it shows), hidden
+   │     ├─ panel-main column, weight = its width in px → **panel-body** stack: files
+   │     │      (yozakura-files), changes (yozakura-changes), commits (yozakura-history)
+   │     └─ **commit** block yozakura-commit, weight = its width in px (560), hidden
    └─ status       block  yozakura-status                 32 px
 ```
 
@@ -224,10 +226,10 @@ Mods (each `place: "none"`):
   the `commit` block (`layout.show`); picking it again, or another repository, clears it and
   hides the block.
 - `yozakura-commit`: the commit detail; `git show` three times (its fields, `--numstat`, the
-  patch, `--diff-merges=first-parent -M`), on the repository's machine. Its width goes through
-  `layout.resize {id: "commit"}`; while its edge drags it shares `yozakura.commit.resize`
-  { x, width } and Commits lays a veil that follows the pointer too. Every 500 ms it hides
-  itself when the side panel is closed or shows Files or Changes.
+  patch, `--diff-merges=first-parent -M`), on the repository's machine. When the detail shows
+  or hides, or ‹ and › change its width, it rewrites the `panel` row's sizes in one
+  `layout.set` (see Watch out). Every 500 ms it hides itself when the side panel is closed or
+  shows Files or Changes.
 
 Shipped mods used: `menu`, `picker`,
 `machine-add`, and `frame/welcome/herdr.png`.
@@ -248,12 +250,14 @@ with faint mottling and fibers, woods with their grain along them, seamless end 
 
 ## Watch out
 
-- The detail doesn't rely on Herdr's own boundary drag (between two fixed widths, which one it
-  resizes isn't documented): it drags its own edge. A mod only hears the pointer
-  while it is over it: going left the pointer crosses Commits, whose veil follows it too, and
-  a release over a terminal reaches no mod, so the detail asks macOS whether the button is
-  still down (`osascript`, every 150 ms while dragging). A mod can't import another's file:
-  the few lines that follow the pointer are in both.
+- Herdr's boundary drags ignore `min` and `max` (so does `layout.resize`), and a child in px
+  that no longer fits spills out of the window. Two fixed widths side by side also made the
+  boundary between them move the wrong one, backwards. So the side panel and the commit detail
+  share the `panel` row by weight, each weight its width in px: they split the row, the
+  boundary between them moves the split, the terminal | row boundary scales both, and nothing
+  can spill out. Showing or hiding the detail grows or shrinks the row by 12 and the detail,
+  so the side panel keeps its width and the terminal gives the room; hidden, the detail's
+  weight keeps its last width. An older layout (the detail in px, bounds) is converted at start.
 - `VirtualListScrollHandle.scroll_to_item(n, "top")` brings a row to the nearest edge: going
   down that is the bottom. To put a file's header at the top, the commit detail aims at the
   row that will be last on screen (`n` + the visible rows − 1, from the list's render range).
@@ -344,9 +348,10 @@ real one (agent cards show account emails):
   command ends.
 - Clicking a commit in Commits opens the detail with its message, files and diff; clicking it
   again closes it; picking Files closes it too.
-- The detail's ‹ makes it 80 px wider and › narrower, Commits keeping its width; dragging its
-  left edge to the left widens it, even with the pointer over Commits, and the drag ends when
-  the button is let go, wherever.
+- The detail's ‹ makes it 80 px wider and › narrower, Commits keeping its width; dragging the
+  boundary between Commits and the detail moves the split between them; the boundary between
+  the terminal and Commits widens or narrows both together. However far they are dragged,
+  nothing leaves the window. Closing and reopening the detail keeps both widths.
 - In the detail, clicking the last file brings its header to the top of the diff; clicking the
   first one then brings the diff back to its start.
 - The gauges card shows four readings within 2 s; `yes > /dev/null` raises CPU, copying a

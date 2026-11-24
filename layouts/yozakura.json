@@ -176,91 +176,97 @@
             },
             {
               "id": "panel",
-              "type": "column",
+              "type": "row",
               "children": [
                 {
-                  "id": "panel-body",
-                  "type": "stack",
+                  "id": "panel-main",
+                  "type": "column",
                   "children": [
                     {
-                      "id": "files",
-                      "type": "block",
-                      "content": {
-                        "mod": "yozakura-files"
-                      },
-                      "background": {
-                        "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
-                        "fit": "cover"
-                      },
-                      "border": {
-                        "width": 4,
-                        "color": "#c8a978"
-                      },
-                      "radius": 4
-                    },
-                    {
-                      "id": "changes",
-                      "type": "block",
-                      "content": {
-                        "mod": "yozakura-changes"
-                      },
-                      "background": {
-                        "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
-                        "fit": "cover"
-                      },
-                      "border": {
-                        "width": 4,
-                        "color": "#c8a978"
-                      },
-                      "radius": 4
-                    },
-                    {
-                      "id": "commits",
-                      "type": "block",
-                      "content": {
-                        "mod": "yozakura-history"
-                      },
-                      "background": {
-                        "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
-                        "fit": "cover"
-                      },
-                      "border": {
-                        "width": 4,
-                        "color": "#c8a978"
-                      },
-                      "radius": 4
+                      "id": "panel-body",
+                      "type": "stack",
+                      "children": [
+                        {
+                          "id": "files",
+                          "type": "block",
+                          "content": {
+                            "mod": "yozakura-files"
+                          },
+                          "background": {
+                            "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                            "fit": "cover"
+                          },
+                          "border": {
+                            "width": 4,
+                            "color": "#c8a978"
+                          },
+                          "radius": 4
+                        },
+                        {
+                          "id": "changes",
+                          "type": "block",
+                          "content": {
+                            "mod": "yozakura-changes"
+                          },
+                          "background": {
+                            "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                            "fit": "cover"
+                          },
+                          "border": {
+                            "width": 4,
+                            "color": "#c8a978"
+                          },
+                          "radius": 4
+                        },
+                        {
+                          "id": "commits",
+                          "type": "block",
+                          "content": {
+                            "mod": "yozakura-history"
+                          },
+                          "background": {
+                            "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                            "fit": "cover"
+                          },
+                          "border": {
+                            "width": 4,
+                            "color": "#c8a978"
+                          },
+                          "radius": 4
+                        }
+                      ],
+                      "active": "commits"
                     }
                   ],
-                  "active": "commits"
+                  "size": {
+                    "weight": 368
+                  }
+                },
+                {
+                  "id": "commit",
+                  "type": "block",
+                  "content": {
+                    "mod": "yozakura-commit"
+                  },
+                  "size": {
+                    "weight": 560
+                  },
+                  "background": {
+                    "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
+                    "fit": "cover"
+                  },
+                  "border": {
+                    "width": 4,
+                    "color": "#c8a978"
+                  },
+                  "radius": 4,
+                  "hidden": true
                 }
               ],
               "size": {
                 "px": 368
               },
-              "min": 280,
-              "max": 900
-            },
-            {
-              "id": "commit",
-              "type": "block",
-              "content": {
-                "mod": "yozakura-commit"
-              },
-              "size": {
-                "px": 560
-              },
-              "min": 320,
-              "max": 1100,
-              "hidden": true,
-              "background": {
-                "image": "mods/yozakura-chrome/shoji/paper-harugasumi.jpg",
-                "fit": "cover"
-              },
-              "border": {
-                "width": 4,
-                "color": "#c8a978"
-              },
-              "radius": 4
+              "gap": 12
             }
           ],
           "padding": 0,
