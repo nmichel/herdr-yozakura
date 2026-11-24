@@ -200,7 +200,8 @@ export default class CommitDetail extends View {
     if (kind === "f") return h_flex().w_full().h(20).flex_none().px(12).gap(6).items_center().bg(t.surface).border_t(1).border_color(t.border)
       .text_color(t.foreground).font_semibold().child(div().truncate().child(text));
     if (kind === "@") return div().w_full().px(12).h(20).flex_none().truncate().bg(t.raised).text_color(t.dim).child(text);
-    return h_flex().w_full().h(20).flex_none().gap(10).when(kind === "+", (e) => e.bg(t.ansi2 + "18")).when(kind === "-", (e) => e.bg(t.ansi1 + "18"))
+    // Franker tints than the theme's muted ANSI pair: a vivid green and red, a third opaque.
+    return h_flex().w_full().h(20).flex_none().gap(10).when(kind === "+", (e) => e.bg("#2ea04355")).when(kind === "-", (e) => e.bg("#f8514955"))
       .child(div().w(30).flex_none().text_right().text_color(t.dim).child(number === undefined ? "" : String(number)))
       .child(div().flex_1().min_w(0).truncate().text_color(kind === "" ? t.dim : t.foreground).child(text));
   }
