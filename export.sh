@@ -13,7 +13,28 @@ mods=(yozakura-agents yozakura-changes yozakura-chrome yozakura-commit yozakura-
       yozakura-spaces yozakura-status yozakura-tabs)
 
 mkdir -p "$here/layouts" "$here/mods" "$here/themes" "$here/backgrounds" "$here/extras"
-cp "$home/layouts/yozakura.json" "$home/layouts/yozakura.svg" "$here/layouts/"
+cp "$home/layouts/yozakura.svg" "$here/layouts/"
+# The layout without the blocks (floating ones too) of mods that aren't published: a project
+# plugin (a mod of your own tied to a repository, see RECIPE.md) stays in the Herdr home it was
+# made in.
+python3 - "$home/layouts/yozakura.json" "$here/layouts/yozakura.json" "${mods[@]}" <<'PY'
+import json, sys
+src, dst, published = sys.argv[1], sys.argv[2], set(sys.argv[3:])
+def keep(node):
+    mod = (node.get("content") or {}).get("mod")
+    return not mod or mod in published
+def prune(node):
+    for key in ("children", "floating"):
+        if key in node:
+            node[key] = [prune(c) for c in node[key] if keep(c)]
+            if key == "floating" and not node[key]:
+                del node[key]
+    return node
+layout = prune(json.load(open(src)))
+with open(dst, "w") as f:
+    json.dump(layout, f, indent=2)
+    f.write("\n")
+PY
 # The layout's three themes, each with its sky (backgrounds/<theme>.png, and the SVG it's from).
 for theme in tsukiyo yugure harugasumi; do
   cp "$home/themes/$theme.json" "$here/themes/"

@@ -3,6 +3,7 @@
 import { View, div, image, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import { theme, run, props, window, shared, setShared, updates, layout, settings, appHome, readTextFile, watchFolder } from "herdr";
+import { startProjects } from "./projects.js";
 
 // A #rrggbb color at an opacity (0..1), as #rrggbbaa. Other colors stay as they are.
 const fade = (c, o) => typeof o !== "number" || o >= 1 || !/^#[0-9a-f]{6}$/i.test(c)
@@ -69,7 +70,7 @@ function applyLook() {
   const card = kit
     ? { border: { width: 4, color: kit.frame }, radius: 4, background: { image: kit.paper, fit: "cover" } }
     : { border: { width: 1, color: "border" }, radius: 14, background: undefined };
-  const cardsChanged = CARDS.some((id) => {
+  const cardsChanged = cards(root).some((id) => {
     const node = find(root, id);
     return node && Object.keys(card).some((k) => JSON.stringify(node[k]) !== JSON.stringify(card[k]));
   }) || SIDE.some((id) => {
@@ -81,7 +82,7 @@ function applyLook() {
   if (!paneChanged && !cardsChanged && !skyChanged) return;
   const next = JSON.parse(JSON.stringify(root));
   Object.assign(find(next, "main").content.pane, want);
-  for (const id of CARDS) {
+  for (const id of cards(next)) {
     const node = find(next, id);
     if (!node) continue;
     Object.assign(node, card);
@@ -96,7 +97,14 @@ function applyLook() {
   if (skyChanged) next.background = { ...(next.background ?? {}), image: sky };
   run("layout.set", { layout: next });
 }
-const CARDS = ["brand", "spaces", "agents", "gauges", "sidebar-footer", "status"];
+// The cards: every block of the sidebar (a private mod's widget too: see RECIPE.md) and the
+// status bar.
+function cards(root) {
+  const ids = [];
+  const walk = (n) => { for (const c of n?.children ?? []) c.type === "block" ? ids.push(c.id) : walk(c); };
+  walk(find(root, "sidebar"));
+  return [...ids, "status"];
+}
 // The side panel's blocks (yozakura-files, -changes, -history) and the commit detail beside
 // it (yozakura-commit): cards like the others with shoji; without, their mods draw their own
 // card, so the layout gives them nothing.
@@ -155,6 +163,7 @@ export default class WorkspaceChrome extends View {
       }
     });
     cx.timer.every(1000, () => applyLook());
+    startProjects(cx); // mods of your own tied to a repository (see projects.js)
   }
   button(id, label, action) {
     const t = theme();

@@ -201,11 +201,12 @@ Mods (each `place: "none"`):
   its own `settings.json` (`readTextFile` + `watchFolder`), shares `yozakura.opacity`,
   `yozakura.mainOpacity` and `yozakura.shoji` (the theme's shoji kit: textures, frame color,
   inks; null when off), and rewrites the layout (`layout.set`) to match the theme shown: its
-  sky on the root; with shoji, the frame and washi of the main pane and of the cards `brand`,
-  `spaces`, `agents`, `gauges`, `sidebar-footer`, `status` (`SHOJI`, `CARDS`), else the main pane's faded
+  sky on the root; with shoji, the frame and washi of the main pane and of the cards (every
+  block of the sidebar, and `status`: `SHOJI`, `cards`), else the main pane's faded
   background and the thin borders; checked every second, so a theme picked in Settings brings
   its sky and its shoji.
-  Holds the shared icons (Lucide-style SVGs) the other mods use.
+  Holds the shared icons (Lucide-style SVGs) the other mods use. Starts project plugins
+  (`projects.js`, see Project plugins).
 - `yozakura-spaces`: spaces list; runs `git status`/`rev-parse` (`exec`, on the space's machine)
   and `hc machine ls`; watches the repos it shows.
 - `yozakura-agents`: agents list, sort popup (`props: {sortMenu: true}`), dancers, the safety
@@ -247,6 +248,29 @@ to its figure over all its frames by `extras/cropgif.swift`, 315 to 408 px wide;
 than tall, cropped square so it stays in the 40 px box), the screen icons,
 the shoji's textures (`mods/yozakura-chrome/shoji/`, drawn by `extras/shoji-textures.py`: papers
 with faint mottling and fibers, woods with their grain along them, seamless end to end).
+
+## Project plugins
+
+A mod of your own, tied to one repository, runs while a space works in it, and nothing in the
+published layout names it. Its `mod.json` says which repository:
+
+```json
+{ "place": "none", "title": "…", "project": "~/path/to/repo" }
+```
+
+yozakura-chrome (`projects.js`, run by the header copy) reads the `mod.json` files of `mods/`
+that declare a `project` (again whenever the folder changes). Every 2 s it looks at every local
+terminal's folder: when one is in the repository, or its git repository is (`git rev-parse
+--git-common-dir`: a worktree anywhere counts as its main checkout), it puts a floating block
+of the mod on the layout's root, `project-<mod>`, with props `{ role: "watch" }`. A mod runs
+only while a block of it is in the layout, and a hidden block never starts it: this one, drawing
+an empty `div()`, starts the mod, which does the rest: its own blocks (a sidebar widget, framed
+like the other cards; a column), added with `layout.set` when missing and shown or hidden as it
+sees fit. When no space works in the repository any more, the floating block goes (the mod
+stops) and the mod's other blocks are hidden. Herdr docks a copy of a mod the first time it sees
+its folder: the mod removes the copies it didn't place. `export.sh` leaves out the blocks,
+floating ones too, of mods it doesn't publish, so a project plugin stays in the Herdr home it
+was made in.
 
 ## Watch out
 
@@ -358,5 +382,10 @@ real one (agent cards show account emails):
   nothing leaves the window. Closing and reopening the detail keeps both widths.
 - In the detail, clicking the last file brings its header to the top of the diff; clicking the
   first one then brings the diff back to its start.
+- A block `x` of a mod that isn't published, added to the sidebar, gets a card's frame and
+  paper; `./export.sh` writes a layout without it.
+- A mod in `mods/` whose `mod.json` has `"project": "<a git repository>"` starts within 2 s of a
+  space opening a terminal in that repository (or a subfolder, or a worktree of it): a floating
+  block `project-<mod>` appears on the root; closing the space removes it and the mod stops.
 - The gauges card shows four readings within 2 s; `yes > /dev/null` raises CPU, copying a
   large file raises Disk, a download raises Network.
