@@ -91,7 +91,9 @@ export function startProjects(cx) {
   // floating blocks gone and their blocks hidden. One layout.set, only when something differs.
   function apply(active) {
     const root = layout();
-    if (!root) return;
+    // Only on this layout: while Herdr starts, layout() can still be another one, and a
+    // layout.set would save that one in its place.
+    if (find(root, "brand")?.content?.mod !== "yozakura-chrome") return;
     const declared = new Set((plugins ?? []).map((p) => p.mod));
     const floating = root.floating ?? [];
     const ours = (f) => f.id?.startsWith(PREFIX);
