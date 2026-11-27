@@ -30,7 +30,7 @@ function find(node, id) {
   return null;
 }
 // The sidebar's rail goes by its width, as in yozakura-chrome.
-const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 100;
+const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 112;
 
 const SCRIPT = "iostat -C -c 2 -w 1 | tail -1; echo @; vm_stat; echo @; sysctl -n hw.memsize; echo @; netstat -ibn";
 

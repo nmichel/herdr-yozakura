@@ -39,7 +39,7 @@ function find(node, id) {
 }
 
 // The sidebar's rail goes by its width, not a flag: dragging its edge narrows it too.
-const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 100;
+const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 112;
 
 // The session's title: what the agent calls it (its terminal title, Claude's session name),
 // without the status glyph in front; not a folder, a user@host or the program's own name.

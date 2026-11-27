@@ -129,10 +129,10 @@ function find(node, id) {
 }
 
 // The sidebar's rail goes by its width, not a flag: dragging its edge narrows it too.
-const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 100;
-// The macOS rail holds the traffic lights (they reach 12 + 64 px) and the unfold chevron after
-// them, and stays under the 100 px where the sidebar unfolds.
-const MACOS_RAIL = 96;
+const narrow = () => (find(layout(), "sidebar")?.size?.px ?? Infinity) < 112;
+// The macOS rail holds the traffic lights (they reach 24 + 64 px) and the unfold chevron after
+// them, and stays under the 112 px where the sidebar unfolds.
+const MACOS_RAIL = 108;
 
 // To the rail, or back to the width it had.
 function toggleSidebar() {
@@ -199,7 +199,7 @@ export default class WorkspaceChrome extends View {
       .when(collapsed && !besideLights, el => el.justify_center()).when(besideLights, el => el.justify_end().pr(4))
       .when(!collapsed, el => el.pl(14).pr(10)).gap(4).items_center().text_size(13.5)
       .when(dragging, el => el.cursor_not_allowed().on_mouse_up("left", () => setShared("yozakura.dock.drag", null))) // a release here cancels
-      .when(lights && !collapsed, el => el.pl(76))
+      .when(lights && !collapsed, el => el.pl(88)) // the lights (24 + 64 px), less the 12 px root padding, then 12 px
       .when(!collapsed, el => el.child(h_flex().flex_1().min_w(0).gap(8).items_center().child(image("frame/welcome/herdr.png").size(20).flex_none().rounded(5)).child(div().min_w(0).truncate().font_semibold().text_color(kit ? kit.ink : t.foreground).child("Herdr"))))
       .when(!collapsed, el => el.child(this.button("search", svg("mods/yozakura-chrome/search.svg").size(15), () => run("mod.open", { name: "picker" }))))
       .child(this.button("sidebar-toggle", svg(`mods/yozakura-chrome/${toggleIcon}.svg`).size(15), toggleSidebar));

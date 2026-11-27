@@ -12,7 +12,7 @@ tinted pink.
 ## What you see
 
 Left to right: a sidebar, then the work column. The window has no system title bar (macOS
-traffic lights at 12,16); the root has 12 px padding and 12 px gaps everywhere. Behind
+traffic lights at 24,24, 12 px inside the brand card); the root has 12 px padding and 12 px gaps everywhere. Behind
 everything, the theme's sky (`backgrounds/<theme>.png`, 3000×2000, `cover`): a sky, a pale moon
 (by day, a pale sun) top right, a cherry branch across the top, mist bands, falling petals,
 seigaiha waves at the bottom.
@@ -166,7 +166,7 @@ against the cards.
   and the side panel get a veil while dragging, so their rows' own pointer doesn't show through.
   The terminals themselves are drawn by the app: over them the pointer stays the system's.
 - The side panel shown is remembered per space. The sidebar folds into a rail below 100 px
-  (44 px; 96 px on macOS), where each space's tile carries its status as a 12 px round badge
+  (44 px; 108 px on macOS), where each space's tile carries its status as a 12 px round badge
   over the letter's bottom right corner. The brand card's toggle folds it; on the rail the same
   button turns into a chevron that unfolds it, right of the traffic lights (centered in full
   screen, where macOS draws none).
